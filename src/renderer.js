@@ -26,6 +26,7 @@ const el = {
 
 // ===== 定数 =====
 const MAX_MS = 12 * 60 * 60 * 1000;                 // 上限12時間
+const DEFAULT_SEC = 5 * 60;                          // 起動時の初期値(5分)。リセットの戻り先
 const RING_C = 2 * Math.PI * 90;                    // リング円周(r=90)
 el.ring.style.strokeDasharray = RING_C;
 
@@ -125,7 +126,7 @@ function reset() {
     completedPomos = 0;
     setPomodoroPhase('work');
   } else {
-    remainingMs = durationMs;
+    applyPreset(DEFAULT_SEC); // 起動時の初期値(5分)に戻す
   }
   render();
 }
@@ -248,5 +249,5 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== 初期表示 =====
-applyCustom();
+applyPreset(DEFAULT_SEC);
 render();
