@@ -28,6 +28,10 @@ const el = {
   start: document.getElementById('start-btn'),
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
+  todoText: document.getElementById('todo-text'),
+  todoAdd: document.getElementById('todo-add'),
+  todoList: document.getElementById('todo-list'),
+  todoEmpty: document.getElementById('todo-empty'),
 };
 
 // ===== 定数 =====
@@ -334,6 +338,95 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ============================================================
+//  To-Do
+// ============================================================
+let todos = []; // { id, text, done }
+
+// 保存データからタスクを読み込む
+async function loadTodos() {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    todos = Array.isArray(store.todos) ? store.todos : [];
+  } catch (e) {
+    console.warn('タスクの読み込みに失敗:', e);
+    todos = [];
+  }
+  renderTodos();
+}
+
+// タスクを保存（他の保存データは保持したまま todos だけ更新）
+async function saveTodos() {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    store.todos = todos;
+    await window.api?.setStore?.(store);
+  } catch (e) {
+    console.warn('タスクの保存に失敗:', e);
+  }
+}
+
+function renderTodos() {
+  el.todoList.innerHTML = '';
+  el.todoEmpty.style.display = todos.length ? 'none' : 'block';
+
+  todos.forEach((t) => {
+    const li = document.createElement('li');
+    li.className = 'todo-item' + (t.done ? ' done' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = t.done;
+    cb.addEventListener('change', () => toggleTodo(t.id));
+
+    const span = document.createElement('span');
+    span.className = 'txt';
+    span.textContent = t.text; // ユーザー入力は textContent で安全に表示
+
+    const del = document.createElement('button');
+    del.className = 'todo-del';
+    del.textContent = '✕';
+    del.title = '削除';
+    del.addEventListener('click', () => deleteTodo(t.id));
+
+    li.append(cb, span, del);
+    el.todoList.appendChild(li);
+  });
+}
+
+function addTodo() {
+  const text = el.todoText.value.trim();
+  if (!text) return;
+  todos.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    text,
+    done: false,
+  });
+  el.todoText.value = '';
+  renderTodos();
+  saveTodos();
+}
+
+function toggleTodo(id) {
+  const t = todos.find((x) => x.id === id);
+  if (t) {
+    t.done = !t.done;
+    renderTodos();
+    saveTodos();
+  }
+}
+
+function deleteTodo(id) {
+  todos = todos.filter((x) => x.id !== id);
+  renderTodos();
+  saveTodos();
+}
+
+el.todoAdd.addEventListener('click', addTodo);
+el.todoText.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addTodo();
+});
+
 // ===== 初期表示 =====
 // 時刻指定の初期値：現在時刻の1時間後（分単位）
 (function initTargetDefault() {
@@ -342,3 +435,4 @@ document.addEventListener('keydown', (e) => {
 })();
 applyPreset(DEFAULT_SEC);
 render();
+loadTodos();
