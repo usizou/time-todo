@@ -13,7 +13,10 @@ const el = {
   time: document.getElementById('time'),
   phase: document.getElementById('phase-label'),
   pomoCount: document.getElementById('pomo-count'),
-  ring: document.getElementById('ring-progress'),
+  ringTotal: document.getElementById('ring-total'),
+  ringHour: document.getElementById('ring-hour'),
+  ringMin: document.getElementById('ring-min'),
+  ringSec: document.getElementById('ring-sec'),
   countdownSetup: document.getElementById('countdown-setup'),
   inHour: document.getElementById('in-hour'),
   inMin: document.getElementById('in-min'),
@@ -27,8 +30,36 @@ const el = {
 // ===== 定数 =====
 const MAX_MS = 12 * 60 * 60 * 1000;                 // 上限12時間
 const DEFAULT_SEC = 5 * 60;                          // 起動時の初期値(5分)。リセットの戻り先
-const RING_C = 2 * Math.PI * 90;                    // リング円周(r=90)
-el.ring.style.strokeDasharray = RING_C;
+const HOUR_CYCLE = 12 * 60 * 60 * 1000;             // 時リングの1周(12時間)
+const MIN_CYCLE = 60 * 60 * 1000;                   // 分リングの1周(1時間)
+const SEC_CYCLE = 60 * 1000;                        // 秒リングの1周(1分)
+
+// 各リングの円（半径ごとに円周を算出し stroke-dasharray に設定）
+const rings = [
+  { node: el.ringTotal, r: 92, cycle: 'total', prev: undefined },
+  { node: el.ringHour,  r: 78, cycle: HOUR_CYCLE, prev: undefined },
+  { node: el.ringMin,   r: 64, cycle: MIN_CYCLE, prev: undefined },
+  { node: el.ringSec,   r: 50, cycle: SEC_CYCLE, prev: undefined },
+];
+rings.forEach((ring) => {
+  ring.c = 2 * Math.PI * ring.r;
+  ring.node.style.strokeDasharray = ring.c;
+});
+
+// リングの進捗を設定（割合が増える=単位の境界を跨いだ時はアニメせず瞬時に戻す）
+function setRing(ring, ratio) {
+  ratio = Math.max(0, Math.min(1, ratio));
+  const offset = ring.c * (1 - ratio);
+  if (ring.prev !== undefined && ratio > ring.prev + 0.001) {
+    ring.node.style.transition = 'none';
+    ring.node.style.strokeDashoffset = offset;
+    void ring.node.getBoundingClientRect(); // 反映を強制
+    ring.node.style.transition = '';
+  } else {
+    ring.node.style.strokeDashoffset = offset;
+  }
+  ring.prev = ratio;
+}
 
 // ===== ポモドーロの設定（分） =====
 const POMO = { work: 25, shortBreak: 5, longBreak: 15, longEvery: 4 };
@@ -58,13 +89,16 @@ function fmt(ms) {
 function render() {
   el.time.textContent = fmt(remainingMs);
 
-  // リング：残り割合に応じて減っていく
-  const ratio = durationMs > 0 ? Math.max(0, remainingMs / durationMs) : 0;
-  el.ring.style.strokeDashoffset = RING_C * (1 - ratio);
+  // 4重リング：外→内(総/時/分/秒)。内側ほど速く回る
+  const R = Math.max(0, remainingMs);
+  setRing(rings[0], durationMs > 0 ? R / durationMs : 0);          // 総時間
+  setRing(rings[1], (R % HOUR_CYCLE) / HOUR_CYCLE);               // 時(12hで1周)
+  setRing(rings[2], (R % MIN_CYCLE) / MIN_CYCLE);                 // 分(1hで1周)
+  setRing(rings[3], (R % SEC_CYCLE) / SEC_CYCLE);                 // 秒(1minで1周)
 
   const warn = running && remainingMs <= 10000;
   el.time.classList.toggle('warning', warn);
-  el.ring.classList.toggle('warning', warn);
+  el.ringTotal.classList.toggle('warning', warn);
 
   if (mode === 'pomodoro') {
     const labels = { work: '🍅 作業', short: '☕ 小休憩', long: '🌴 長休憩' };
@@ -95,7 +129,7 @@ function start() {
   if (running || remainingMs <= 0) return;
   running = true;
   endTime = Date.now() + remainingMs;
-  ticker = setInterval(tick, 200);
+  ticker = setInterval(tick, 100);
   render();
 }
 

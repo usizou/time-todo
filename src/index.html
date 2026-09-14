@@ -21,17 +21,33 @@
       <button class="mode" data-mode="pomodoro">ポモドーロ</button>
     </div>
 
-    <!-- 残り時間の表示（円形リング） -->
+    <!-- 残り時間の表示（4重の同心円リング） -->
     <div class="display">
       <svg class="ring" viewBox="0 0 200 200">
-        <circle class="ring-track" cx="100" cy="100" r="90" />
-        <circle id="ring-progress" class="ring-progress" cx="100" cy="100" r="90" />
+        <!-- 背景トラック -->
+        <circle class="ring-track" cx="100" cy="100" r="92" />
+        <circle class="ring-track" cx="100" cy="100" r="78" />
+        <circle class="ring-track" cx="100" cy="100" r="64" />
+        <circle class="ring-track" cx="100" cy="100" r="50" />
+        <!-- 進捗リング（外→内: 総/時/分/秒） -->
+        <circle id="ring-total" class="ring-progress p-total" cx="100" cy="100" r="92" />
+        <circle id="ring-hour"  class="ring-progress p-hour"  cx="100" cy="100" r="78" />
+        <circle id="ring-min"   class="ring-progress p-min"   cx="100" cy="100" r="64" />
+        <circle id="ring-sec"   class="ring-progress p-sec"   cx="100" cy="100" r="50" />
       </svg>
       <div class="ring-center">
         <div id="phase-label" class="phase-label"></div>
         <div id="time" class="time">00:00</div>
         <div id="pomo-count" class="pomo-count"></div>
       </div>
+    </div>
+
+    <!-- リングの凡例 -->
+    <div class="ring-legend">
+      <span class="lg lg-total">総</span>
+      <span class="lg lg-hour">時</span>
+      <span class="lg lg-min">分</span>
+      <span class="lg lg-sec">秒</span>
     </div>
 
     <!-- カウントダウン用：時間のプリセット＆入力 -->

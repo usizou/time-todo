@@ -79,12 +79,18 @@ body {
   font-weight: 600;
 }
 
-/* --- 表示（円形リング） --- */
+/* --- 表示（4重の同心円リング） --- */
+:root {
+  --ring-total: #a6e3a1; /* 緑 */
+  --ring-hour:  #89b4fa; /* 青 */
+  --ring-min:   #cba6f7; /* 紫 */
+  --ring-sec:   #fab387; /* 橙 */
+}
 .display {
   position: relative;
-  width: 240px;
-  height: 240px;
-  margin: 8px auto 24px;
+  width: 260px;
+  height: 260px;
+  margin: 6px auto 12px;
 }
 .ring {
   width: 100%;
@@ -94,17 +100,23 @@ body {
 .ring-track {
   fill: none;
   stroke: var(--panel);
-  stroke-width: 10;
+  stroke-width: 7;
 }
 .ring-progress {
   fill: none;
-  stroke: var(--accent-2);
-  stroke-width: 10;
+  stroke-width: 7;
   stroke-linecap: round;
-  /* JSで stroke-dasharray / offset を設定 */
-  transition: stroke-dashoffset 0.3s linear, stroke 0.3s;
+  /* JSで stroke-dasharray / dashoffset を設定 */
+  transition: stroke-dashoffset 0.2s linear, stroke 0.3s;
 }
-.ring-progress.warning { stroke: var(--danger); }
+.p-total { stroke: var(--ring-total); }
+.p-hour  { stroke: var(--ring-hour); }
+.p-min   { stroke: var(--ring-min); }
+.p-sec   { stroke: var(--ring-sec); }
+.p-total.warning,
+.time.warning { color: var(--danger); }
+.p-total.warning { stroke: var(--danger); }
+
 .ring-center {
   position: absolute;
   inset: 0;
@@ -115,13 +127,13 @@ body {
   text-align: center;
 }
 .phase-label {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--accent-2);
-  height: 20px;
-  margin-bottom: 4px;
+  height: 18px;
+  margin-bottom: 2px;
 }
 .time {
-  font-size: 44px;
+  font-size: 34px;
   font-weight: 200;
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
@@ -129,11 +141,33 @@ body {
 }
 .time.warning { color: var(--danger); }
 .pomo-count {
+  font-size: 11px;
+  color: var(--muted);
+  height: 15px;
+  margin-top: 6px;
+}
+
+/* --- リング凡例 --- */
+.ring-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 16px;
   font-size: 12px;
   color: var(--muted);
-  height: 16px;
-  margin-top: 8px;
 }
+.lg { display: flex; align-items: center; gap: 5px; }
+.lg::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.lg-total::before { background: var(--ring-total); }
+.lg-hour::before  { background: var(--ring-hour); }
+.lg-min::before   { background: var(--ring-min); }
+.lg-sec::before   { background: var(--ring-sec); }
 
 /* --- セットアップ --- */
 .setup { margin-bottom: 20px; }
