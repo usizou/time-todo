@@ -165,6 +165,14 @@ flowchart LR
     Long --> Work
 ```
 
+### 5.5.1 毎正時チャイム
+
+- ON にすると毎時 XX:00 に音（`beep`）と通知を出す（`store.chimeEnabled` に保存、起動時復元）。
+- `msToNextHour()` で次の正時までの ms を求め、`setTimeout` で予約 → 発火時に再計算して連鎖
+  （`setInterval` を使わずドリフトを避ける。スリープ復帰時も次回発火で再整合）。
+- タイマー本体とは独立。音を確実に鳴らすため main の `webPreferences.autoplayPolicy` を
+  `'no-user-gesture-required'` に設定。
+
 ### 5.6 通知（終了時）
 
 - **音**: WebAudio で 880Hz のビープを 0.25s 間隔で3回鳴らす（`beep()`）。外部音源ファイル不要。

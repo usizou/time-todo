@@ -35,6 +35,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      autoplayPolicy: 'no-user-gesture-required', // 操作なしでもチャイム音を鳴らせるように
     },
   });
 

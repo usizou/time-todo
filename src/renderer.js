@@ -28,6 +28,7 @@ const el = {
   start: document.getElementById('start-btn'),
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
+  chimeOn: document.getElementById('chime-on'),
   todoText: document.getElementById('todo-text'),
   todoAdd: document.getElementById('todo-add'),
   todoList: document.getElementById('todo-list'),
@@ -339,20 +340,65 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+//  毎正時チャイム（XX:00 に鳴らす、繰り返し）
+// ============================================================
+let chimeTimer = null;
+
+// 次の正時(XX:00:00)までのミリ秒
+function msToNextHour() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(now.getHours() + 1, 0, 0, 0);
+  return next.getTime() - now.getTime();
+}
+
+// 次の正時に鳴らす予約（ドリフトを避けるため毎回再計算して連鎖）
+function scheduleChime() {
+  clearTimeout(chimeTimer);
+  chimeTimer = setTimeout(() => {
+    beep();
+    const h = new Date().getHours();
+    notify('⏰ 正時のお知らせ', `${String(h).padStart(2, '0')}:00 になりました`);
+    scheduleChime();
+  }, msToNextHour());
+}
+
+// チャイムのON/OFF（save=false のときは保存しない＝復元時など）
+function setChime(enabled, save = true) {
+  el.chimeOn.checked = enabled;
+  clearTimeout(chimeTimer);
+  if (enabled) scheduleChime();
+  if (save) saveChime(enabled);
+}
+
+async function saveChime(enabled) {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    store.chimeEnabled = enabled;
+    await window.api?.setStore?.(store);
+  } catch (e) {
+    console.warn('チャイム設定の保存に失敗:', e);
+  }
+}
+
+el.chimeOn.addEventListener('change', () => setChime(el.chimeOn.checked));
+
+// ============================================================
 //  To-Do
 // ============================================================
 let todos = []; // { id, text, done }
 
 // 保存データからタスクを読み込む
 async function loadTodos() {
+  let store = {};
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    todos = Array.isArray(store.todos) ? store.todos : [];
+    store = (await window.api?.getStore?.()) || {};
   } catch (e) {
-    console.warn('タスクの読み込みに失敗:', e);
-    todos = [];
+    console.warn('保存データの読み込みに失敗:', e);
   }
+  todos = Array.isArray(store.todos) ? store.todos : [];
   renderTodos();
+  setChime(!!store.chimeEnabled, false); // チャイム設定を復元（保存はしない）
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）

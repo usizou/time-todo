@@ -249,6 +249,24 @@ body {
 .secondary { background: var(--panel); color: var(--text); }
 .secondary:hover:not(:disabled) { filter: brightness(1.2); }
 
+/* --- 毎正時チャイム --- */
+.chime-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chime-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* --- To-Do --- */
 .todo-input {
   display: flex;
