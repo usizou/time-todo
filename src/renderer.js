@@ -18,10 +18,13 @@ const el = {
   ringMin: document.getElementById('ring-min'),
   ringSec: document.getElementById('ring-sec'),
   countdownSetup: document.getElementById('countdown-setup'),
+  targetSetup: document.getElementById('target-setup'),
   inHour: document.getElementById('in-hour'),
   inMin: document.getElementById('in-min'),
   inSec: document.getElementById('in-sec'),
+  inTarget: document.getElementById('in-target'),
   setBtn: document.getElementById('set-btn'),
+  targetBtn: document.getElementById('target-btn'),
   start: document.getElementById('start-btn'),
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
@@ -65,7 +68,8 @@ function setRing(ring, ratio) {
 const POMO = { work: 25, shortBreak: 5, longBreak: 15, longEvery: 4 };
 
 // ===== 状態 =====
-let mode = 'countdown';        // 'countdown' | 'pomodoro'
+let mode = 'countdown';        // 'countdown' | 'pomodoro' | 'target'
+let targetTimestamp = null;    // 時刻指定モードの目標時刻(タイムスタンプ)
 let phase = 'work';            // ポモドーロ用: 'work' | 'short' | 'long'
 let completedPomos = 0;        // 完了した作業セッション数
 let durationMs = 5 * 60 * 1000; // 現在のフェーズの総時間
@@ -105,10 +109,24 @@ function render() {
     el.phase.textContent = labels[phase];
     el.pomoCount.textContent = `完了: ${completedPomos} セッション`;
     el.countdownSetup.style.display = 'none';
+    el.targetSetup.style.display = 'none';
+  } else if (mode === 'target') {
+    if (targetTimestamp) {
+      const t = new Date(targetTimestamp);
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
+      el.phase.textContent = `🎯 ${hh}:${mm} まで`;
+    } else {
+      el.phase.textContent = '🎯 時刻を設定';
+    }
+    el.pomoCount.textContent = '';
+    el.countdownSetup.style.display = 'none';
+    el.targetSetup.style.display = 'block';
   } else {
     el.phase.textContent = '';
     el.pomoCount.textContent = '';
     el.countdownSetup.style.display = 'block';
+    el.targetSetup.style.display = 'none';
   }
 
   el.start.textContent = running ? '稼働中…' : (remainingMs < durationMs ? '再開' : 'スタート');
@@ -126,9 +144,18 @@ function setPomodoroPhase(newPhase) {
 
 // ===== 開始 =====
 function start() {
-  if (running || remainingMs <= 0) return;
-  running = true;
-  endTime = Date.now() + remainingMs;
+  if (running) return;
+  if (mode === 'target' && targetTimestamp) {
+    // 目標時刻に正確に合わせる（セットからstartまでの経過も反映）
+    remainingMs = targetTimestamp - Date.now();
+    if (remainingMs <= 0) { applyTarget(); return; } // 過ぎていたら翌日に再設定
+    running = true;
+    endTime = targetTimestamp;
+  } else {
+    if (remainingMs <= 0) return;
+    running = true;
+    endTime = Date.now() + remainingMs;
+  }
   ticker = setInterval(tick, 100);
   render();
 }
@@ -159,6 +186,8 @@ function reset() {
   if (mode === 'pomodoro') {
     completedPomos = 0;
     setPomodoroPhase('work');
+  } else if (mode === 'target') {
+    applyTarget(); // 目標時刻から残り時間を再計算
   } else {
     applyPreset(DEFAULT_SEC); // 起動時の初期値(5分)に戻す
   }
@@ -183,6 +212,9 @@ function finish() {
     }
     render();
     start(); // 次のフェーズを自動開始
+  } else if (mode === 'target') {
+    notify('指定時刻になりました', '設定した時刻です ⏰');
+    render();
   } else {
     notify('タイマー終了', '設定した時間が経過しました ⏱');
     render();
@@ -234,6 +266,22 @@ function applyCustom() {
   render();
 }
 
+// ===== 時刻指定：目標時刻から残り時間を算出 =====
+function applyTarget() {
+  const v = el.inTarget.value; // "HH:MM"
+  if (!v) { targetTimestamp = null; render(); return; }
+  const [h, m] = v.split(':').map(Number);
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  if (target.getTime() <= Date.now()) {
+    target.setDate(target.getDate() + 1); // 過ぎていれば翌日
+  }
+  targetTimestamp = target.getTime();
+  remainingMs = targetTimestamp - Date.now();
+  durationMs = remainingMs; // 総リングの基準（設定時点〜目標時刻）
+  render();
+}
+
 // ===== プリセット（秒数指定） =====
 function applyPreset(sec) {
   const capped = Math.min(sec, MAX_MS / 1000);
@@ -248,6 +296,8 @@ el.start.addEventListener('click', start);
 el.pause.addEventListener('click', pause);
 el.reset.addEventListener('click', reset);
 el.setBtn.addEventListener('click', applyCustom);
+el.targetBtn.addEventListener('click', applyTarget);
+el.inTarget.addEventListener('change', () => { if (!running) applyTarget(); });
 
 document.querySelectorAll('.preset').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -267,6 +317,8 @@ document.querySelectorAll('.mode').forEach((btn) => {
     if (mode === 'pomodoro') {
       completedPomos = 0;
       setPomodoroPhase('work');
+    } else if (mode === 'target') {
+      applyTarget();
     } else {
       applyCustom();
     }
@@ -283,5 +335,10 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== 初期表示 =====
+// 時刻指定の初期値：現在時刻の1時間後（分単位）
+(function initTargetDefault() {
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  el.inTarget.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+})();
 applyPreset(DEFAULT_SEC);
 render();

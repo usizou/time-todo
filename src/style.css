@@ -64,13 +64,14 @@ body {
 }
 .mode {
   flex: 1;
-  padding: 8px;
+  padding: 8px 4px;
   background: transparent;
   border: none;
   color: var(--muted);
   border-radius: 7px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  white-space: nowrap;
   transition: all 0.15s;
 }
 .mode.active {
@@ -206,6 +207,10 @@ body {
   border-radius: 6px;
   text-align: center;
   font-size: 14px;
+}
+.custom-input input[type="time"] {
+  width: auto;
+  color-scheme: dark; /* ネイティブ時刻ピッカーを暗色に */
 }
 #set-btn {
   margin-left: 6px;
