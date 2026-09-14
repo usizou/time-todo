@@ -1,0 +1,43 @@
+{
+  "name": "time-todo",
+  "version": "0.2.0",
+  "description": "タイマー & To-Do デスクトップアプリ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "usizou",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "allowScripts": {
+    "electron@38.8.6": true
+  },
+  "build": {
+    "appId": "com.usizou.timetodo",
+    "productName": "Time & To-Do",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Time & To-Do"
+    },
+    "portable": {
+      "artifactName": "TimeToDo-portable-${version}.${ext}"
+    }
+  }
+}

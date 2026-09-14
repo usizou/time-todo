@@ -1,0 +1,220 @@
+:root {
+  --bg: #1e1e2e;
+  --panel: #27293d;
+  --accent: #89b4fa;
+  --accent-2: #a6e3a1;
+  --text: #cdd6f4;
+  --muted: #6c7086;
+  --danger: #f38ba8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* --- タブ --- */
+.tabs {
+  display: flex;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+}
+.tab-panel.active { display: flex; }
+
+/* --- モード切り替え --- */
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  background: var(--panel);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+.mode {
+  flex: 1;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.mode.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* --- 表示（円形リング） --- */
+.display {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 8px auto 24px;
+}
+.ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* 12時方向スタート */
+}
+.ring-track {
+  fill: none;
+  stroke: var(--panel);
+  stroke-width: 10;
+}
+.ring-progress {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 10;
+  stroke-linecap: round;
+  /* JSで stroke-dasharray / offset を設定 */
+  transition: stroke-dashoffset 0.3s linear, stroke 0.3s;
+}
+.ring-progress.warning { stroke: var(--danger); }
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.phase-label {
+  font-size: 15px;
+  color: var(--accent-2);
+  height: 20px;
+  margin-bottom: 4px;
+}
+.time {
+  font-size: 44px;
+  font-weight: 200;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.time.warning { color: var(--danger); }
+.pomo-count {
+  font-size: 12px;
+  color: var(--muted);
+  height: 16px;
+  margin-top: 8px;
+}
+
+/* --- セットアップ --- */
+.setup { margin-bottom: 20px; }
+.presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.preset {
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid transparent;
+  color: var(--text);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.preset:hover { border-color: var(--accent); }
+.custom-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.custom-input input {
+  width: 48px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--muted);
+  color: var(--text);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+}
+#set-btn {
+  margin-left: 6px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cap-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* --- 操作ボタン --- */
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+.controls button {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+.primary { background: var(--accent-2); color: var(--bg); font-weight: 600; }
+.primary:hover:not(:disabled) { filter: brightness(1.1); }
+.secondary { background: var(--panel); color: var(--text); }
+.secondary:hover:not(:disabled) { filter: brightness(1.2); }
+
+/* --- プレースホルダ --- */
+.placeholder {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+}
+.placeholder p { margin: 8px 0; }
+.hint { font-size: 12px; }

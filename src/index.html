@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time & To-Do</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- タブ切り替え（将来 To-Do もここに増やす） -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="timer">⏱ タイマー</button>
+    <button class="tab" data-tab="todo">✓ To-Do</button>
+  </nav>
+
+  <!-- タイマー画面 -->
+  <section id="tab-timer" class="tab-panel active">
+    <!-- モード切り替え -->
+    <div class="mode-switch">
+      <button class="mode active" data-mode="countdown">カウントダウン</button>
+      <button class="mode" data-mode="pomodoro">ポモドーロ</button>
+    </div>
+
+    <!-- 残り時間の表示（円形リング） -->
+    <div class="display">
+      <svg class="ring" viewBox="0 0 200 200">
+        <circle class="ring-track" cx="100" cy="100" r="90" />
+        <circle id="ring-progress" class="ring-progress" cx="100" cy="100" r="90" />
+      </svg>
+      <div class="ring-center">
+        <div id="phase-label" class="phase-label"></div>
+        <div id="time" class="time">00:00</div>
+        <div id="pomo-count" class="pomo-count"></div>
+      </div>
+    </div>
+
+    <!-- カウントダウン用：時間のプリセット＆入力 -->
+    <div id="countdown-setup" class="setup">
+      <div class="presets">
+        <button class="preset" data-sec="60">1分</button>
+        <button class="preset" data-sec="300">5分</button>
+        <button class="preset" data-sec="600">10分</button>
+        <button class="preset" data-sec="1500">25分</button>
+        <button class="preset" data-sec="3600">1時間</button>
+        <button class="preset" data-sec="10800">3時間</button>
+      </div>
+      <div class="custom-input">
+        <input id="in-hour" type="number" min="0" max="12" value="0" /> 時
+        <input id="in-min" type="number" min="0" max="59" value="5" /> 分
+        <input id="in-sec" type="number" min="0" max="59" value="0" /> 秒
+        <button id="set-btn">セット</button>
+      </div>
+      <div class="cap-note">最大 12 時間まで設定できます</div>
+    </div>
+
+    <!-- 操作ボタン -->
+    <div class="controls">
+      <button id="start-btn" class="primary">スタート</button>
+      <button id="pause-btn" class="secondary" disabled>一時停止</button>
+      <button id="reset-btn" class="secondary">リセット</button>
+    </div>
+  </section>
+
+  <!-- To-Do画面（今はプレースホルダ。次のステップで実装） -->
+  <section id="tab-todo" class="tab-panel">
+    <div class="placeholder">
+      <p>📝 To-Do 機能は次のステップで追加します。</p>
+      <p class="hint">タイマーが完成したら、ここにタスク一覧を作りましょう。</p>
+    </div>
+  </section>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
