@@ -387,6 +387,7 @@ el.chimeOn.addEventListener('change', () => setChime(el.chimeOn.checked));
 //  To-Do
 // ============================================================
 let todos = []; // { id, text, done }
+let dragId = null; // ドラッグ中のタスクID
 
 // 保存データからタスクを読み込む
 async function loadTodos() {
@@ -419,6 +420,13 @@ function renderTodos() {
   todos.forEach((t) => {
     const li = document.createElement('li');
     li.className = 'todo-item' + (t.done ? ' done' : '');
+    li.draggable = true;
+    li.dataset.id = t.id;
+
+    const handle = document.createElement('span');
+    handle.className = 'todo-handle';
+    handle.textContent = '⠿';
+    handle.title = 'ドラッグで並べ替え';
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
@@ -435,9 +443,57 @@ function renderTodos() {
     del.title = '削除';
     del.addEventListener('click', () => deleteTodo(t.id));
 
-    li.append(cb, span, del);
+    // --- ドラッグ＆ドロップで並べ替え ---
+    li.addEventListener('dragstart', (e) => {
+      dragId = t.id;
+      e.dataTransfer.effectAllowed = 'move';
+      li.classList.add('dragging');
+    });
+    li.addEventListener('dragend', () => {
+      dragId = null;
+      clearDropMarks();
+      li.classList.remove('dragging');
+    });
+    li.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (dragId === null || dragId === t.id) return;
+      e.dataTransfer.dropEffect = 'move';
+      const rect = li.getBoundingClientRect();
+      const after = e.clientY - rect.top > rect.height / 2;
+      li.classList.toggle('over-bottom', after);
+      li.classList.toggle('over-top', !after);
+    });
+    li.addEventListener('dragleave', () => {
+      li.classList.remove('over-top', 'over-bottom');
+    });
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const rect = li.getBoundingClientRect();
+      const after = e.clientY - rect.top > rect.height / 2;
+      moveTodo(dragId, t.id, after);
+    });
+
+    li.append(handle, cb, span, del);
     el.todoList.appendChild(li);
   });
+}
+
+function clearDropMarks() {
+  el.todoList.querySelectorAll('.over-top, .over-bottom')
+    .forEach((n) => n.classList.remove('over-top', 'over-bottom'));
+}
+
+// fromId を toId の前(after=false)/後(after=true)へ移動
+function moveTodo(fromId, toId, after) {
+  if (fromId == null || fromId === toId) return;
+  const from = todos.findIndex((t) => t.id === fromId);
+  if (from < 0) return;
+  const [item] = todos.splice(from, 1);
+  let to = todos.findIndex((t) => t.id === toId);
+  if (to < 0) { todos.splice(from, 0, item); return; } // 念のため復元
+  todos.splice(after ? to + 1 : to, 0, item);
+  renderTodos();
+  saveTodos();
 }
 
 function addTodo() {
