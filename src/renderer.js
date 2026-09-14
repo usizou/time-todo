@@ -33,6 +33,8 @@ const el = {
   todoAdd: document.getElementById('todo-add'),
   todoList: document.getElementById('todo-list'),
   todoEmpty: document.getElementById('todo-empty'),
+  todoActions: document.getElementById('todo-actions'),
+  todoClearDone: document.getElementById('todo-clear-done'),
 };
 
 // ===== 定数 =====
@@ -416,6 +418,8 @@ async function saveTodos() {
 function renderTodos() {
   el.todoList.innerHTML = '';
   el.todoEmpty.style.display = todos.length ? 'none' : 'block';
+  // 完了タスクがあるときだけ「完了したタスクを削除」を表示
+  el.todoActions.style.display = todos.some((t) => t.done) ? 'flex' : 'none';
 
   todos.forEach((t) => {
     const li = document.createElement('li');
@@ -524,7 +528,15 @@ function deleteTodo(id) {
   saveTodos();
 }
 
+// 完了済みのタスクをまとめて削除
+function clearCompleted() {
+  todos = todos.filter((t) => !t.done);
+  renderTodos();
+  saveTodos();
+}
+
 el.todoAdd.addEventListener('click', addTodo);
+el.todoClearDone.addEventListener('click', clearCompleted);
 el.todoText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addTodo();
 });

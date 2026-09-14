@@ -295,6 +295,23 @@ body {
 }
 #todo-add:hover { filter: brightness(1.1); }
 
+.todo-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+#todo-clear-done {
+  background: transparent;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#todo-clear-done:hover { border-color: var(--danger); color: var(--danger); }
+
 .todo-list {
   list-style: none;
   display: flex;
