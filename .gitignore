@@ -1,3 +1,18 @@
+# 依存関係・ビルド生成物
 node_modules/
 dist/
+out/
+
+# ログ
 *.log
+npm-debug.log*
+
+# OS が作るファイル
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# エディタ設定
+.vscode/
+.idea/
+*.swp
