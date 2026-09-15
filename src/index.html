@@ -11,6 +11,7 @@
   <nav class="tabs">
     <button class="tab active" data-tab="timer">⏱ タイマー</button>
     <button class="tab" data-tab="todo">✓ To-Do</button>
+    <button class="tab" data-tab="memo">📝 メモ</button>
   </nav>
 
   <!-- タイマー画面 -->
@@ -109,6 +110,12 @@
     </div>
     <ul id="todo-list" class="todo-list"></ul>
     <div id="todo-empty" class="todo-empty">タスクはまだありません</div>
+  </section>
+
+  <!-- メモ画面 -->
+  <section id="tab-memo" class="tab-panel">
+    <textarea id="memo-text" class="memo-text" placeholder="一言メモ… (自動保存されます)" maxlength="5000"></textarea>
+    <div id="memo-status" class="memo-status"></div>
   </section>
 
   <script src="renderer.js"></script>

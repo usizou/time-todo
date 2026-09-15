@@ -40,6 +40,8 @@ const el = {
   todoEmpty: document.getElementById('todo-empty'),
   todoActions: document.getElementById('todo-actions'),
   todoClearDone: document.getElementById('todo-clear-done'),
+  memoText: document.getElementById('memo-text'),
+  memoStatus: document.getElementById('memo-status'),
 };
 
 // ===== 定数 =====
@@ -446,6 +448,7 @@ async function loadTodos() {
     el.inTarget.value = store.lastTargetTime; // 前回の目標時刻を初期値に
     if (!S.target.running) applyTarget(false); // 状態へ反映（保存はしない）
   }
+  if (typeof store.memo === 'string') el.memoText.value = store.memo; // メモを復元
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
@@ -704,6 +707,33 @@ el.todoAdd.addEventListener('click', addTodo);
 el.todoClearDone.addEventListener('click', clearCompleted);
 el.todoText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addTodo();
+});
+
+// ============================================================
+//  メモ（自動保存）
+// ============================================================
+let memoTimer = null;
+
+async function saveMemo() {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    store.memo = el.memoText.value;
+    await window.api?.setStore?.(store);
+    el.memoStatus.textContent = '保存しました';
+  } catch (e) {
+    console.warn('メモの保存に失敗:', e);
+    el.memoStatus.textContent = '保存に失敗しました';
+  }
+}
+
+el.memoText.addEventListener('input', () => {
+  el.memoStatus.textContent = '入力中…';
+  clearTimeout(memoTimer);
+  memoTimer = setTimeout(saveMemo, 500); // 入力が止まったら保存
+});
+el.memoText.addEventListener('blur', () => {
+  clearTimeout(memoTimer);
+  saveMemo();
 });
 
 // ===== 初期表示 =====
