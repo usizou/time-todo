@@ -466,7 +466,9 @@ function renderTodos() {
   el.todoActions.style.display = todos.some((t) => t.done) ? 'flex' : 'none';
   updateNextTodo(); // タイマー画面の「次の予定」も同期
 
-  todos.forEach((t) => {
+  // 表示は「未完了→完了」の順（並び順自体は保持。JSのsortは安定なのでグループ内順序は不変）
+  const ordered = [...todos].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+  ordered.forEach((t) => {
     const li = document.createElement('li');
     li.className = 'todo-item' + (t.done ? ' done' : '');
     li.draggable = true;
