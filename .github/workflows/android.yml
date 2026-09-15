@@ -27,14 +27,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # ubuntu-latest には Android SDK が同梱済み。それを使い、必要パッケージだけ用意する
-      - name: Prepare Android SDK
+      # ubuntu-latest には Android SDK が同梱済み。sdkmanager を動的に探して必要パッケージを用意
+      # （見つからない/失敗しても、同梱済みパッケージで進めるようビルドは止めない）
+      - name: Prepare Android SDK (best-effort)
+        continue-on-error: true
         run: |
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          echo "Using Android SDK at: $SDK"
-          SDKMGR="$SDK/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
-          "$SDKMGR" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "Android SDK dir: $SDK"
+          SDKMGR="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMGR" ]; then
+            SDKMGR="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | sort -r | head -1)"
+          fi
+          echo "sdkmanager: ${SDKMGR:-not found}"
+          if [ -n "$SDKMGR" ]; then
+            yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+            "$SDKMGR" "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+          fi
 
       - name: Capacitor sync (copy web assets & plugins)
         run: npx cap sync android
