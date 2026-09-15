@@ -248,10 +248,10 @@ body {
 }
 .now-clock {
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  margin: -4px 0 12px;
+  margin-top: 6px;
 }
 
 /* --- 操作ボタン --- */
