@@ -139,7 +139,7 @@ body {
 .ring-progress {
   fill: none;
   stroke-width: 7;
-  stroke-linecap: round;
+  stroke-linecap: butt; /* 端を角なしにして区切り線に揃える */
   /* JSで stroke-dasharray / dashoffset を設定 */
   transition: stroke-dashoffset 0.2s linear, stroke 0.3s;
 }
