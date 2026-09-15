@@ -100,20 +100,28 @@ time-todo/
 
 ## 5. タイマーの設計
 
-### 5.1 状態モデル
+### 5.1 状態モデル（モードごとに独立・同時稼働）
 
-レンダラーはグローバルな状態変数群で1つのタイマーを管理する。
+3つのモード（countdown / pomodoro / target）は**それぞれ独立した状態**を持ち、
+**同時に稼働**できる。`mode` は「今表示しているモード」を指すだけで、切り替えても他は止まらない。
 
-| 変数 | 意味 |
-|---|---|
-| `mode` | `'countdown'` / `'pomodoro'` |
-| `phase` | ポモドーロ用フェーズ `'work'` / `'short'` / `'long'` |
-| `completedPomos` | 完了した作業セッション数 |
-| `durationMs` | 現フェーズの総時間（リングの分母） |
-| `remainingMs` | 残り時間 |
-| `endTime` | 稼働中の終了時刻（`Date.now()` 基準のタイムスタンプ） |
-| `ticker` | `setInterval` のID |
-| `running` | 稼働中フラグ |
+```js
+const S = {
+  countdown: { durationMs, remainingMs, endTime, running },
+  pomodoro:  { durationMs, remainingMs, endTime, running, phase, completedPomos },
+  target:    { durationMs, remainingMs, endTime, running, targetTimestamp },
+};
+let mode = 'countdown'; // 表示中のモード
+```
+
+- **共通ティッカー**：`tickAll()` を1本の `setInterval`(100ms)で回し、稼働中の全モードの
+  `remainingMs = endTime - now` を更新。0以下になったモードは `finishMode(m)` を実行（表示中で
+  なくても音・通知は出る）。全モードが停止したらティッカーを止める（`ensureTicker`/`anyRunning`）。
+- `start` / `pause` / `reset` は**現在表示中のモード**にのみ作用。モード切替ボタンは表示を変える
+  だけ。稼働中のモードはボタンに緑のドット（`.is-running`）で示す。
+- 各フィールドの意味：`durationMs`=総時間（リングの分母）、`remainingMs`=残り、
+  `endTime`=終了時刻のタイムスタンプ、`running`=稼働中、`phase`/`completedPomos`=ポモドーロ用、
+  `targetTimestamp`=目標時刻。
 
 ### 5.2 ドリフト対策（重要な設計判断）
 

@@ -79,6 +79,14 @@ body {
   color: var(--bg);
   font-weight: 600;
 }
+.mode.is-running::after {
+  content: "●";
+  color: var(--accent-2);
+  font-size: 8px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.mode.active.is-running::after { color: var(--bg); }
 
 /* --- 表示（4重の同心円リング） --- */
 :root {
