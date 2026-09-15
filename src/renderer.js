@@ -809,19 +809,19 @@ function hasOverdueTodo() {
   });
 }
 
-// 「次の予定」に出すタスク：今日・未完了で、予定が「これから1時間以内」のもののうち最も近いもの
-// （翌日以降は出さない／1時間前から表示）
+// 「次の予定」に出すタスク：今日・未完了で、予定が「1時間前〜」のもののうち今に最も近いもの
+// （翌日以降は出さない／1時間前から表示／時刻が来ても完了するまで消えない）
 function nextAlarmTodo() {
   const now = Date.now();
   let best = null;
-  let bestTime = Infinity;
+  let bestDelta = Infinity;
   todos.forEach((t) => {
     if (t.done) return;
     const dt = taskDateTime(t);
     if (!dt || !isTodayMs(dt)) return;      // 今日のみ（翌日以降は非表示）
-    if (dt < now) return;                    // 過ぎたものは「次の予定」には出さない（超過表示で扱う）
-    if (dt - now > 3600000) return;          // 1時間前になってから表示
-    if (dt < bestTime) { bestTime = dt; best = t; }
+    if (dt - now > 3600000) return;          // 未来は1時間前になってから表示
+    const delta = Math.abs(dt - now);        // 過ぎたものも対象。今に最も近いものを表示
+    if (delta < bestDelta) { bestDelta = delta; best = t; }
   });
   return best;
 }
