@@ -15,6 +15,7 @@ const el = {
   phase: document.getElementById('phase-label'),
   pomoCount: document.getElementById('pomo-count'),
   tabTimer: document.getElementById('tab-timer'),
+  nowClock: document.getElementById('now-clock'),
   ringTotal: document.getElementById('ring-total'),
   ringHour: document.getElementById('ring-hour'),
   ringMin: document.getElementById('ring-min'),
@@ -99,6 +100,17 @@ function ensureTicker() {
   if (!ticker) ticker = setInterval(tickAll, 100);
 }
 
+// ===== 現在日時（時刻まで モードで表示、毎秒更新） =====
+const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+function updateClock() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  el.nowClock.textContent =
+    `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}(${WEEK[d.getDay()]}) ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+setInterval(updateClock, 1000);
+
 // ===== 時間の表示（12時間対応：h>0なら HH:MM:SS） =====
 function fmt(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -125,6 +137,7 @@ function render() {
   el.tabTimer.classList.toggle('no-total', mode === 'target');   // 時刻まで：総リングを隠す
   el.tabTimer.classList.toggle('only-total', mode !== 'target'); // カウントダウン/ポモドーロ：総リングだけ
   el.chimeToggle.style.display = mode === 'target' ? 'flex' : 'none'; // チャイムは時刻まででのみ表示
+  el.nowClock.style.display = mode === 'target' ? 'block' : 'none';   // 現在日時は時刻まででのみ表示
 
   const warn = s.running && s.remainingMs <= 10000;
   el.time.classList.toggle('warning', warn);
@@ -806,5 +819,6 @@ el.memoInput.addEventListener('keydown', (e) => {
 applyPreset(DEFAULT_SEC); // カウントダウンの初期値(5分)
 setPomodoroPhase('work');  // ポモドーロの初期状態
 applyTarget(false);        // 時刻まで の初期状態（保存はしない）
+updateClock();             // 現在日時の初期表示
 render();
 loadTodos();
