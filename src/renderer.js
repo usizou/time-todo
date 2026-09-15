@@ -48,6 +48,22 @@ const el = {
   themeToggle: document.getElementById('theme-toggle'),
 };
 
+// ===== 保存（Electronならstore.json / それ以外はlocalStorage） =====
+async function getStore() {
+  if (window.api?.getStore) {
+    try { return (await window.api.getStore()) || {}; } catch { return {}; }
+  }
+  try { return JSON.parse(localStorage.getItem('timetodo') || '{}'); } catch { return {}; }
+}
+async function setStore(data) {
+  if (window.api?.setStore) {
+    try { return await window.api.setStore(data); } catch { return; }
+  }
+  try { localStorage.setItem('timetodo', JSON.stringify(data)); } catch {}
+}
+// 読み書きの競合を避けるため、保存データは1つの共有オブジェクトに集約する
+let STORE = {};
+
 // ===== 定数 =====
 const MAX_MS = 12 * 60 * 60 * 1000;                 // 上限12時間
 const DEFAULT_SEC = 5 * 60;                          // 起動時の初期値(5分)。リセットの戻り先
@@ -345,9 +361,8 @@ function applyTarget(save = true) {
 // 目標時刻(HH:MM)を保存（次回起動時の初期値に使う）
 async function saveTargetTime(v) {
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    store.lastTargetTime = v;
-    await window.api?.setStore?.(store);
+    STORE.lastTargetTime = v;
+    await setStore(STORE);
   } catch (e) {
     console.warn('目標時刻の保存に失敗:', e);
   }
@@ -433,9 +448,8 @@ function setChime(enabled, save = true) {
 
 async function saveChime(enabled) {
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    store.chimeEnabled = enabled;
-    await window.api?.setStore?.(store);
+    STORE.chimeEnabled = enabled;
+    await setStore(STORE);
   } catch (e) {
     console.warn('チャイム設定の保存に失敗:', e);
   }
@@ -451,12 +465,12 @@ let dragId = null; // ドラッグ中のタスクID
 
 // 保存データからタスクを読み込む
 async function loadTodos() {
-  let store = {};
   try {
-    store = (await window.api?.getStore?.()) || {};
+    STORE = await getStore();
   } catch (e) {
     console.warn('保存データの読み込みに失敗:', e);
   }
+  const store = STORE;
   todos = Array.isArray(store.todos) ? store.todos : [];
   renderTodos();
   setChime(!!store.chimeEnabled, false); // チャイム設定を復元（保存はしない）
@@ -481,9 +495,8 @@ async function loadTodos() {
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
 async function saveTodos() {
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    store.todos = todos;
-    await window.api?.setStore?.(store);
+    STORE.todos = todos;
+    await setStore(STORE);
   } catch (e) {
     console.warn('タスクの保存に失敗:', e);
   }
@@ -743,9 +756,8 @@ let memos = []; // { id, text, at }
 
 async function saveMemos() {
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    store.memos = memos;
-    await window.api?.setStore?.(store);
+    STORE.memos = memos;
+    await setStore(STORE);
   } catch (e) {
     console.warn('メモの保存に失敗:', e);
   }
@@ -827,9 +839,8 @@ function applyTheme(t) {
 
 async function saveTheme() {
   try {
-    const store = (await window.api?.getStore?.()) || {};
-    store.theme = theme;
-    await window.api?.setStore?.(store);
+    STORE.theme = theme;
+    await setStore(STORE);
   } catch (e) {
     console.warn('テーマの保存に失敗:', e);
   }
