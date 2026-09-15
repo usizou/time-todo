@@ -114,6 +114,11 @@ body {
 .p-hour  { stroke: var(--ring-hour); }
 .p-min   { stroke: var(--ring-min); }
 .p-sec   { stroke: var(--ring-sec); }
+/* 時刻まで モードでは総合時間の円と凡例を隠す */
+.no-total .p-total,
+.no-total .track-total,
+.no-total .lg-total { display: none; }
+
 .p-total.warning,
 .time.warning { color: var(--danger); }
 .p-total.warning { stroke: var(--danger); }

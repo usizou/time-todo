@@ -14,6 +14,7 @@ const el = {
   time: document.getElementById('time'),
   phase: document.getElementById('phase-label'),
   pomoCount: document.getElementById('pomo-count'),
+  tabTimer: document.getElementById('tab-timer'),
   ringTotal: document.getElementById('ring-total'),
   ringHour: document.getElementById('ring-hour'),
   ringMin: document.getElementById('ring-min'),
@@ -109,6 +110,8 @@ function render() {
   setRing(rings[1], (R % HOUR_CYCLE) / HOUR_CYCLE);               // 時(12hで1周)
   setRing(rings[2], (R % MIN_CYCLE) / MIN_CYCLE);                 // 分(1hで1周)
   setRing(rings[3], (R % SEC_CYCLE) / SEC_CYCLE);                 // 秒(1minで1周)
+
+  el.tabTimer.classList.toggle('no-total', mode === 'target'); // 時刻までは総リングと凡例を非表示
 
   const warn = running && remainingMs <= 10000;
   el.time.classList.toggle('warning', warn);
