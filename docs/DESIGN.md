@@ -185,6 +185,7 @@ flowchart LR
   （`setInterval` を使わずドリフトを避ける。スリープ復帰時も次回発火で再整合）。
 - タイマー本体とは独立。音を確実に鳴らすため main の `webPreferences.autoplayPolicy` を
   `'no-user-gesture-required'` に設定。
+- チェックボックスは「時刻まで」モードのときのみ表示（機能はどのモードでも動作継続）。
 
 ### 5.6 通知（終了時）
 

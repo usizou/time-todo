@@ -31,6 +31,7 @@ const el = {
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
   chimeOn: document.getElementById('chime-on'),
+  chimeToggle: document.querySelector('.chime-toggle'),
   nextTodo: document.getElementById('next-todo'),
   todoText: document.getElementById('todo-text'),
   todoTime: document.getElementById('todo-time'),
@@ -119,6 +120,7 @@ function render() {
 
   el.tabTimer.classList.toggle('no-total', mode === 'target');   // 時刻まで：総リングを隠す
   el.tabTimer.classList.toggle('only-total', mode !== 'target'); // カウントダウン/ポモドーロ：総リングだけ
+  el.chimeToggle.style.display = mode === 'target' ? 'flex' : 'none'; // チャイムは時刻まででのみ表示
 
   const warn = s.running && s.remainingMs <= 10000;
   el.time.classList.toggle('warning', warn);
