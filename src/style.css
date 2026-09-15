@@ -212,7 +212,8 @@ body {
   width: auto;
   color-scheme: dark; /* ネイティブ時刻ピッカーを暗色に */
 }
-#set-btn {
+#set-btn,
+#target-btn {
   margin-left: 6px;
   padding: 8px 12px;
   background: var(--panel);
