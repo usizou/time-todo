@@ -384,6 +384,20 @@ body {
   font-size: 13px;
 }
 .todo-when-hint { font-size: 11px; color: var(--muted); }
+
+/* 空の日付/時刻入力に例示(プレースホルダ)を重ねる（Chromium系） */
+.td-ph { position: relative; }
+.td-ph.is-empty::-webkit-datetime-edit { opacity: 0; }
+.td-ph.is-empty::before {
+  content: attr(data-ph);
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
 #todo-text {
   flex: 1;
   min-width: 0;

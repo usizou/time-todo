@@ -537,6 +537,11 @@ el.chimeOn.addEventListener('change', () => setChime(el.chimeOn.checked));
 let todos = []; // { id, text, done, date, time, firedOn }
 let dragId = null; // ドラッグ中のタスクID
 
+// 空の日付/時刻入力に例示を出すため、値の有無で is-empty を切り替える
+function refreshPh(input) {
+  if (input) input.classList.toggle('is-empty', !input.value);
+}
+
 // タスクの予定日時(ms)。date未指定は今日扱い。timeが無ければnull
 function taskDateTime(t) {
   if (!t.time) return null;
@@ -637,12 +642,15 @@ function renderTodos() {
 
     const date = document.createElement('input');
     date.type = 'date';
-    date.className = 'todo-date';
+    date.className = 'todo-date td-ph';
+    date.dataset.ph = 'yyyy/mm/dd';
     date.value = t.date || '';
     date.title = '日付（空欄で今日）';
+    refreshPh(date);
     date.addEventListener('change', () => {
       t.date = date.value;
       t.firedOn = '';
+      refreshPh(date);
       saveTodos();
     });
 
@@ -650,12 +658,15 @@ function renderTodos() {
     const time = document.createElement('input');
     time.type = 'time';
     time.step = 60;
-    time.className = 'todo-time';
+    time.className = 'todo-time td-ph';
+    time.dataset.ph = 'HH:MM';
     time.value = t.time || '';
     time.title = 'アラーム時刻（空欄でアラームなし）';
+    refreshPh(time);
     time.addEventListener('change', () => {
       t.time = time.value;
       t.firedOn = ''; // 時刻変更時はアラームを再アーム
+      refreshPh(time);
       saveTodos();
     });
 
@@ -761,6 +772,8 @@ function addTodo() {
   el.todoText.value = '';
   el.todoDate.value = '';
   el.todoTime.value = '';
+  refreshPh(el.todoDate);
+  refreshPh(el.todoTime);
   renderTodos();
   saveTodos();
 }
@@ -889,6 +902,11 @@ el.todoClearDone.addEventListener('click', clearCompleted);
 el.todoText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addTodo();
 });
+// 追加欄の日付/時刻：例示(プレースホルダ)の初期表示と更新
+refreshPh(el.todoDate);
+refreshPh(el.todoTime);
+el.todoDate.addEventListener('input', () => refreshPh(el.todoDate));
+el.todoTime.addEventListener('input', () => refreshPh(el.todoTime));
 
 // ============================================================
 //  メモ（一言を入力するとリストに残る）
