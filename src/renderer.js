@@ -45,6 +45,7 @@ const el = {
   memoAdd: document.getElementById('memo-add'),
   memoList: document.getElementById('memo-list'),
   memoEmpty: document.getElementById('memo-empty'),
+  themeToggle: document.getElementById('theme-toggle'),
 };
 
 // ===== 定数 =====
@@ -473,6 +474,8 @@ async function loadTodos() {
     memos = [];
   }
   renderMemos();
+
+  applyTheme(store.theme || 'dark'); // テーマを復元（既定はダーク）
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
@@ -808,6 +811,33 @@ function deleteMemo(id) {
 el.memoAdd.addEventListener('click', addMemo);
 el.memoInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addMemo();
+});
+
+// ============================================================
+//  テーマ（ダーク / ライト）
+// ============================================================
+let theme = 'dark';
+
+function applyTheme(t) {
+  theme = t === 'light' ? 'light' : 'dark';
+  document.body.classList.toggle('light', theme === 'light');
+  // ボタンは「切り替え先」を表示（ダーク中は太陽、ライト中は月）
+  el.themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+}
+
+async function saveTheme() {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    store.theme = theme;
+    await window.api?.setStore?.(store);
+  } catch (e) {
+    console.warn('テーマの保存に失敗:', e);
+  }
+}
+
+el.themeToggle.addEventListener('click', () => {
+  applyTheme(theme === 'light' ? 'dark' : 'light');
+  saveTheme();
 });
 
 // ===== 初期表示 =====

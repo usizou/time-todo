@@ -204,6 +204,13 @@ flowchart LR
 メモは一言を入力するとリストに残るログ形式（`store.memos` に `{id, text, at}` の配列で保存、
 新しいものが上、日時付き、削除可。旧形式の `store.memo` 文字列は起動時に1件へ移行）。
 
+### 6.2 テーマ（ダーク / ライト）
+
+- 配色はすべて CSS 変数（`--bg`/`--panel`/`--text`/`--accent`/…/リング色）で定義。
+- 既定はダーク（`:root`）。`body.light` でライト（Catppuccin Latte 系）に上書き。
+- タブ右のトグルで切替。`store.theme` に保存し起動時に復元（既定はダーク）。
+- `color-scheme` も `:root`(dark)/`body.light`(light) で切替え、ネイティブの時刻ピッカーも追従。
+
 ### 6.2 円形リングによる残量表現
 
 SVG の `<circle>` 2枚（背景トラック + 進捗）で構成。半径 `r=90`。
