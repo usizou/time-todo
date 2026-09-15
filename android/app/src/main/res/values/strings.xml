@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Time &amp; To-Do</string>
+    <string name="title_activity_main">Time &amp; To-Do</string>
+    <string name="package_name">com.usizou.timetodo</string>
+    <string name="custom_url_scheme">com.usizou.timetodo</string>
+</resources>

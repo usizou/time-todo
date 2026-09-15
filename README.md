@@ -82,6 +82,30 @@ npm run dist
 | `src/style.css` | 見た目 |
 | `docs/DESIGN.md` | 技術設計資料 |
 
+## スマートフォン（Android）で使う
+
+Capacitor で Android アプリ(APK)化でき、GitHub Actions（クラウド）でビルドします。
+この PC に Android SDK を入れる必要はありません。
+
+手順:
+
+1. このリポジトリを GitHub に push する
+2. GitHub の **Actions** タブ →「Build Android APK」→ **Run workflow**（`main` への push でも自動実行）
+3. 実行完了後、その run の **Artifacts** から `TimeToDo-android-debug`（APK）をダウンロード
+4. APK をスマホに転送し、「提供元不明のアプリ」を許可してインストール
+
+補足:
+- 生成されるのはデバッグ版（未署名）です。個人利用向け。
+- タイマー終了・毎正時チャイム・タスクのアラームは、OSのスケジュール通知として予約され、
+  **アプリを閉じていても指定時刻に通知**されます（初回に通知の許可が必要）。
+- スマホ版のデータは端末内（localStorage）に保存され、PC版とは同期しません。
+
+ローカルで Android プロジェクトを更新したいときは:
+
+```bash
+npm run sync
+```
+
 ## ライセンス
 
 [MIT](./LICENSE)

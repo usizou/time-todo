@@ -1,0 +1,16 @@
+# 既定はテキスト自動判定・リポジトリ内はLF
+* text=auto eol=lf
+
+# Linux の CI で実行するスクリプトは LF 固定
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows 用バッチは CRLF
+*.bat text eol=crlf
+
+# バイナリ（改行変換しない）
+*.png binary
+*.jpg binary
+*.jar binary
+*.keystore binary
+*.ico binary

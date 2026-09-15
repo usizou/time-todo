@@ -344,9 +344,19 @@ npm run dist # exe 生成
 
 ## 13. 将来のモバイル対応方針（Android）
 
-現状は Electron（デスクトップ専用）で、この exe がそのまま Android で動くことはない。
-ただし UI・ロジックは HTML/CSS/JS で書かれており、**画面とタイマー/To-Do のロジックは再利用可能**。
-移植する場合の方針を以下にまとめる（現時点では未着手）。
+現状は Electron（デスクトップ専用）だが、UI・ロジックは HTML/CSS/JS のため再利用できる。
+**Capacitor で Android アプリ化し、GitHub Actions でAPKをビルドする方針で実装済み**。
+
+### 13.0 実装状況（Android / Capacitor）
+
+- `capacitor.config.json`（appId/appName/webDir=`src`）＋ `android/` プロジェクト。
+- 保存は `getStore`/`setStore` を共通化（Electronは`store.json`、それ以外は`localStorage`）。
+- 通知は `src/mobile.js` が Capacitor 検出時のみ `@capacitor/local-notifications` で
+  **スケジュール通知**を予約（`syncMobile()` が状態変化・起動・復帰時に再予約）。
+  タイマー終了・毎正時チャイム・タスクのアラームを、アプリを閉じていても発火させる。
+- ビルドは `.github/workflows/android.yml`（Actions）でクラウド生成 → APK を Artifact で取得。
+- 既知の制約: スマホ版データは端末内で PC と非同期。デバッグAPK（未署名）。ポモドーロは
+  現在フェーズ終了のみ予約（次フェーズは起動/復帰時に再予約）。実機での微調整余地あり。
 
 ### 13.1 移植アプローチの比較
 

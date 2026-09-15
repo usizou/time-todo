@@ -64,6 +64,44 @@ async function setStore(data) {
 // 読み書きの競合を避けるため、保存データは1つの共有オブジェクトに集約する
 let STORE = {};
 
+// ===== スマホ(Capacitor)向け：OS通知を予約し直す =====
+// デスクトップ/ブラウザでは window.Mobile.isNative() が false なので何もしない。
+function syncMobile() {
+  if (!window.Mobile || !window.Mobile.isNative()) return;
+  const items = [];
+  const now = Date.now();
+  const nextOccur = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  };
+  // タスクのアラーム
+  todos.forEach((t, i) => {
+    if (!t.done && t.time) {
+      items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: t.text, at: nextOccur(t.time) });
+    }
+  });
+  // 毎正時チャイム（次の24時間分を予約）
+  if (el.chimeOn.checked) {
+    const base = new Date();
+    base.setMinutes(0, 0, 0);
+    base.setHours(base.getHours() + 1);
+    for (let k = 0; k < 24; k++) {
+      const at = base.getTime() + k * 3600000;
+      const h = new Date(at).getHours();
+      items.push({ id: 20000 + k, title: '⏰ 正時のお知らせ', body: `${String(h).padStart(2, '0')}:00 になりました`, at });
+    }
+  }
+  // 稼働中タイマーの終了
+  if (S.countdown.running && S.countdown.endTime) items.push({ id: 30000, title: 'タイマー終了', body: '設定した時間が経過しました', at: S.countdown.endTime });
+  if (S.target.running && S.target.endTime) items.push({ id: 30001, title: '指定時刻になりました', body: '設定した時刻です', at: S.target.endTime });
+  if (S.pomodoro.running && S.pomodoro.endTime) items.push({ id: 30002, title: 'ポモドーロ', body: 'フェーズが終了しました', at: S.pomodoro.endTime });
+
+  window.Mobile.scheduleAll(items);
+}
+
 // ===== 定数 =====
 const MAX_MS = 12 * 60 * 60 * 1000;                 // 上限12時間
 const DEFAULT_SEC = 5 * 60;                          // 起動時の初期値(5分)。リセットの戻り先
@@ -226,6 +264,7 @@ function start() {
   }
   ensureTicker();
   render();
+  syncMobile();
 }
 
 // ===== 全モードを進める（共通ティッカー） =====
@@ -251,6 +290,7 @@ function pause() {
   s.running = false;
   s.remainingMs = Math.max(0, s.endTime - Date.now());
   render();
+  syncMobile();
 }
 
 // ===== リセット（現在のモード） =====
@@ -266,6 +306,7 @@ function reset() {
     applyPreset(DEFAULT_SEC); // 起動時の初期値(5分)に戻す
   }
   render();
+  syncMobile();
 }
 
 // ===== 終了処理（指定モード。表示中でなくても通知は出す） =====
@@ -363,6 +404,7 @@ async function saveTargetTime(v) {
   try {
     STORE.lastTargetTime = v;
     await setStore(STORE);
+    syncMobile();
   } catch (e) {
     console.warn('目標時刻の保存に失敗:', e);
   }
@@ -450,6 +492,7 @@ async function saveChime(enabled) {
   try {
     STORE.chimeEnabled = enabled;
     await setStore(STORE);
+    syncMobile();
   } catch (e) {
     console.warn('チャイム設定の保存に失敗:', e);
   }
@@ -490,6 +533,7 @@ async function loadTodos() {
   renderMemos();
 
   applyTheme(store.theme || 'dark'); // テーマを復元（既定はダーク）
+  syncMobile(); // スマホ：復元後に通知を予約
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
@@ -497,6 +541,7 @@ async function saveTodos() {
   try {
     STORE.todos = todos;
     await setStore(STORE);
+    syncMobile();
   } catch (e) {
     console.warn('タスクの保存に失敗:', e);
   }
@@ -863,3 +908,9 @@ applyTarget(false);        // 時刻まで の初期状態（保存はしない�
 updateClock();             // 現在日時の初期表示
 render();
 loadTodos();
+
+// スマホ(Capacitor)：通知許可の取得と、復帰時の再スケジュール
+if (window.Mobile && window.Mobile.isNative()) {
+  window.Mobile.requestPermission();
+  window.Mobile.onResume(() => { checkAlarms(); syncMobile(); });
+}
