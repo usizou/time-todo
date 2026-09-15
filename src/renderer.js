@@ -121,6 +121,23 @@ rings.forEach((ring) => {
   ring.node.style.strokeDasharray = ring.c;
 });
 
+// 目盛りの区切り：各リングを単位数に分割（総12 / 時12 / 分60 / 秒60）
+const NOTCH = [
+  { id: 'notch-total', r: 92, seg: 12 },
+  { id: 'notch-hour',  r: 78, seg: 12 },
+  { id: 'notch-min',   r: 64, seg: 60 },
+  { id: 'notch-sec',   r: 50, seg: 60 },
+];
+const NOTCH_GAP = 3; // 区切りの太さ（viewBox単位）
+NOTCH.forEach((n) => {
+  const node = document.getElementById(n.id);
+  if (!node) return;
+  const c = 2 * Math.PI * n.r;
+  const unit = c / n.seg;
+  // 「gap分だけ背景色を塗る → 残りは透明」を繰り返して区切り線にする
+  node.style.strokeDasharray = `${NOTCH_GAP} ${unit - NOTCH_GAP}`;
+});
+
 // リングの進捗を設定（割合が増える=単位の境界を跨いだ時はアニメせず瞬時に戻す）
 function setRing(ring, ratio) {
   ratio = Math.max(0, Math.min(1, ratio));
