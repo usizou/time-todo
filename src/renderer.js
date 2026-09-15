@@ -347,6 +347,10 @@ el.start.addEventListener('click', start);
 el.pause.addEventListener('click', pause);
 el.reset.addEventListener('click', reset);
 el.setBtn.addEventListener('click', () => { if (!S.countdown.running) applyCustom(); });
+// 時/分/秒を変えたら「セット」を押さなくても自動反映
+[el.inHour, el.inMin, el.inSec].forEach((input) => {
+  input.addEventListener('change', () => { if (!S.countdown.running) applyCustom(); });
+});
 el.targetBtn.addEventListener('click', () => { if (!S.target.running) applyTarget(true); });
 el.inTarget.addEventListener('change', () => { if (!S.target.running) applyTarget(true); });
 
