@@ -150,6 +150,8 @@ stateDiagram-v2
   `remainingMs = durationMs = targetTimestamp - Date.now()` を設定（総リングの基準は設定〜目標の全長）。
 - `start()` では `endTime = targetTimestamp` に直接ロックし、セット〜開始間の経過も含めて
   実時刻に正確に合わせる。終了時は「指定時刻になりました」を通知。
+- 設定した目標時刻(HH:MM)は `store.lastTargetTime` に保存し、次回起動時の初期値に復元する
+  （保存が無ければ現在+1時間）。
 
 ### 5.5 ポモドーロ
 

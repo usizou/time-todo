@@ -291,7 +291,19 @@ function applyTarget() {
   targetTimestamp = target.getTime();
   remainingMs = targetTimestamp - Date.now();
   durationMs = remainingMs; // 総リングの基準（設定時点〜目標時刻）
+  saveTargetTime(v); // 次回の初期値として保存
   render();
+}
+
+// 目標時刻(HH:MM)を保存（次回起動時の初期値に使う）
+async function saveTargetTime(v) {
+  try {
+    const store = (await window.api?.getStore?.()) || {};
+    store.lastTargetTime = v;
+    await window.api?.setStore?.(store);
+  } catch (e) {
+    console.warn('目標時刻の保存に失敗:', e);
+  }
 }
 
 // ===== プリセット（秒数指定） =====
@@ -407,6 +419,7 @@ async function loadTodos() {
   todos = Array.isArray(store.todos) ? store.todos : [];
   renderTodos();
   setChime(!!store.chimeEnabled, false); // チャイム設定を復元（保存はしない）
+  if (store.lastTargetTime) el.inTarget.value = store.lastTargetTime; // 前回の目標時刻を初期値に
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
