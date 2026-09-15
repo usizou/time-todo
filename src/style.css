@@ -127,6 +127,11 @@ body {
 .no-total .track-total,
 .no-total .lg-total { display: none; }
 
+/* カウントダウン/ポモドーロは総合時間の円だけ（時/分/秒を隠す） */
+.only-total .p-hour, .only-total .track-hour, .only-total .lg-hour,
+.only-total .p-min,  .only-total .track-min,  .only-total .lg-min,
+.only-total .p-sec,  .only-total .track-sec,  .only-total .lg-sec { display: none; }
+
 .p-total.warning,
 .time.warning { color: var(--danger); }
 .p-total.warning { stroke: var(--danger); }

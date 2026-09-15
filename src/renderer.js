@@ -117,7 +117,8 @@ function render() {
   setRing(rings[2], (R % MIN_CYCLE) / MIN_CYCLE);                 // 分(1hで1周)
   setRing(rings[3], (R % SEC_CYCLE) / SEC_CYCLE);                 // 秒(1minで1周)
 
-  el.tabTimer.classList.toggle('no-total', mode === 'target'); // 時刻までは総リングと凡例を非表示
+  el.tabTimer.classList.toggle('no-total', mode === 'target');   // 時刻まで：総リングを隠す
+  el.tabTimer.classList.toggle('only-total', mode !== 'target'); // カウントダウン/ポモドーロ：総リングだけ
 
   const warn = s.running && s.remainingMs <= 10000;
   el.time.classList.toggle('warning', warn);
