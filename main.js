@@ -26,7 +26,7 @@ function saveStore(data) {
 function createWindow() {
   const win = new BrowserWindow({
     width: 420,
-    height: 760,
+    height: 820,
     minWidth: 360,
     minHeight: 560,
     title: 'Time & To-Do',
