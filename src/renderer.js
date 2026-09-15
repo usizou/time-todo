@@ -36,6 +36,7 @@ const el = {
   nextTodo: document.getElementById('next-todo'),
   todoText: document.getElementById('todo-text'),
   todoTime: document.getElementById('todo-time'),
+  todoDate: document.getElementById('todo-date'),
   todoAdd: document.getElementById('todo-add'),
   todoList: document.getElementById('todo-list'),
   todoEmpty: document.getElementById('todo-empty'),
@@ -70,17 +71,12 @@ function syncMobile() {
   if (!window.Mobile || !window.Mobile.isNative()) return;
   const items = [];
   const now = Date.now();
-  const nextOccur = (hhmm) => {
-    const [h, m] = hhmm.split(':').map(Number);
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    if (d.getTime() <= now) d.setDate(d.getDate() + 1);
-    return d.getTime();
-  };
-  // タスクのアラーム
+  // タスクのアラーム（予定日時。未来のものだけ予約。翌日以降も通知は出す）
   todos.forEach((t, i) => {
-    if (!t.done && t.time) {
-      items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: t.text, at: nextOccur(t.time) });
+    if (t.done) return;
+    const dt = taskDateTime(t);
+    if (dt && dt > now) {
+      items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: t.text, at: dt });
     }
   });
   // 毎正時チャイム（次の24時間分を予約）
@@ -538,8 +534,27 @@ el.chimeOn.addEventListener('change', () => setChime(el.chimeOn.checked));
 // ============================================================
 //  To-Do
 // ============================================================
-let todos = []; // { id, text, done }
+let todos = []; // { id, text, done, date, time, firedOn }
 let dragId = null; // ドラッグ中のタスクID
+
+// タスクの予定日時(ms)。date未指定は今日扱い。timeが無ければnull
+function taskDateTime(t) {
+  if (!t.time) return null;
+  const [h, m] = t.time.split(':').map(Number);
+  if (t.date) {
+    const [Y, Mo, D] = t.date.split('-').map(Number);
+    return new Date(Y, Mo - 1, D, h, m, 0, 0).getTime();
+  }
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+// 指定msが「今日」か
+function isTodayMs(ms) {
+  const a = new Date(ms);
+  const b = new Date();
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
 
 // 保存データからタスクを読み込む
 async function loadTodos() {
@@ -607,9 +622,29 @@ function renderTodos() {
     cb.checked = t.done;
     cb.addEventListener('change', () => toggleTodo(t.id));
 
+    // 本文（クリックで編集）＋ 日付/時刻
+    const body = document.createElement('div');
+    body.className = 'm-body';
+
     const span = document.createElement('span');
     span.className = 'txt';
     span.textContent = t.text; // ユーザー入力は textContent で安全に表示
+    span.title = 'クリックで編集';
+    span.addEventListener('click', () => startEditText(li, span, t));
+
+    const when = document.createElement('div');
+    when.className = 'todo-when';
+
+    const date = document.createElement('input');
+    date.type = 'date';
+    date.className = 'todo-date';
+    date.value = t.date || '';
+    date.title = '日付（空欄で今日）';
+    date.addEventListener('change', () => {
+      t.date = date.value;
+      t.firedOn = '';
+      saveTodos();
+    });
 
     // アラーム時刻（任意）。変更・クリア可能
     const time = document.createElement('input');
@@ -623,6 +658,9 @@ function renderTodos() {
       t.firedOn = ''; // 時刻変更時はアラームを再アーム
       saveTodos();
     });
+
+    when.append(date, time);
+    body.append(span, when);
 
     const del = document.createElement('button');
     del.className = 'todo-del';
@@ -660,9 +698,35 @@ function renderTodos() {
       moveTodo(dragId, t.id, after);
     });
 
-    li.append(handle, cb, span, time, del);
+    li.append(handle, cb, body, del);
     el.todoList.appendChild(li);
   });
+}
+
+// 本文をその場で編集（クリック→入力欄）。編集中はドラッグ無効
+function startEditText(li, span, t) {
+  if (span.dataset.editing) return;
+  span.dataset.editing = '1';
+  li.draggable = false;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'edit-input';
+  input.maxLength = 200;
+  input.value = t.text;
+  const commit = () => {
+    const v = input.value.trim();
+    if (v) t.text = v; // 空なら変更しない
+    renderTodos();
+    saveTodos();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    else if (e.key === 'Escape') { input.value = t.text; input.blur(); }
+  });
+  input.addEventListener('blur', commit);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
 }
 
 function clearDropMarks() {
@@ -690,31 +754,29 @@ function addTodo() {
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     text,
     done: false,
+    date: el.todoDate.value || '', // 空欄なら今日扱い
     time: el.todoTime.value || '', // 空欄ならアラームなし
     firedOn: '',
   });
   el.todoText.value = '';
+  el.todoDate.value = '';
   el.todoTime.value = '';
   renderTodos();
   saveTodos();
 }
 
-// ===== タスクのアラーム（時刻を設定したタスクを毎分チェック） =====
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
+// ===== タスクのアラーム（予定日時に達したら発火） =====
 function checkAlarms() {
-  const d = new Date();
-  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  const today = todayStr();
+  const now = Date.now();
   let changed = false;
   todos.forEach((t) => {
-    if (!t.done && t.time && t.time === hhmm && t.firedOn !== today) {
+    if (t.done) return;
+    const dt = taskDateTime(t);
+    // 予定時刻を過ぎた直後(1分以内)に一度だけ発火。firedOnで再発火防止
+    if (dt && now >= dt && now < dt + 60000 && t.firedOn !== dt) {
       beep();
       notify('⏰ タスクの時刻です', t.text);
-      t.firedOn = today; // その日のうちの再発火を防ぐ
+      t.firedOn = dt;
       changed = true;
     }
   });
@@ -737,30 +799,29 @@ el.nextTodo.addEventListener('click', () => {
   }
 });
 
-// 予定時刻を過ぎたのに未完了のタスクがあるか（今日のHH:MMが現在より前）
+// 予定超過（今日の予定時刻を過ぎたのに未完了）のタスクがあるか
 function hasOverdueTodo() {
   const now = Date.now();
   return todos.some((t) => {
-    if (t.done || !t.time) return false;
-    const [h, m] = t.time.split(':').map(Number);
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    return d.getTime() < now;
+    if (t.done) return false;
+    const dt = taskDateTime(t);
+    return dt && isTodayMs(dt) && dt < now;
   });
 }
 
-// 次にアラームが鳴る未完了タスク（時刻の次回発生が最も近いもの）
+// 「次の予定」に出すタスク：今日・未完了で、予定が「これから1時間以内」のもののうち最も近いもの
+// （翌日以降は出さない／1時間前から表示）
 function nextAlarmTodo() {
   const now = Date.now();
   let best = null;
   let bestTime = Infinity;
   todos.forEach((t) => {
-    if (t.done || !t.time) return;
-    const [h, m] = t.time.split(':').map(Number);
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    if (d.getTime() <= now) d.setDate(d.getDate() + 1); // 過ぎていれば翌日
-    if (d.getTime() < bestTime) { bestTime = d.getTime(); best = t; }
+    if (t.done) return;
+    const dt = taskDateTime(t);
+    if (!dt || !isTodayMs(dt)) return;      // 今日のみ（翌日以降は非表示）
+    if (dt < now) return;                    // 過ぎたものは「次の予定」には出さない（超過表示で扱う）
+    if (dt - now > 3600000) return;          // 1時間前になってから表示
+    if (dt < bestTime) { bestTime = dt; best = t; }
   });
   return best;
 }

@@ -109,8 +109,12 @@
   <section id="tab-todo" class="tab-panel">
     <div class="todo-input">
       <input id="todo-text" type="text" placeholder="タスクを入力…" maxlength="200" />
-      <input id="todo-time" type="time" step="60" class="todo-time-add" title="アラーム時刻（任意）" />
       <button id="todo-add">追加</button>
+    </div>
+    <div class="todo-input2">
+      <input id="todo-date" type="date" class="todo-date-add" title="日付（任意・空欄で今日）" />
+      <input id="todo-time" type="time" step="60" class="todo-time-add" title="時刻（任意・空欄でアラームなし）" />
+      <span class="todo-when-hint">日時（任意）</span>
     </div>
     <div id="todo-actions" class="todo-actions">
       <button id="todo-clear-done">完了したタスクを削除</button>
