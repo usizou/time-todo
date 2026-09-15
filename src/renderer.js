@@ -40,8 +40,10 @@ const el = {
   todoEmpty: document.getElementById('todo-empty'),
   todoActions: document.getElementById('todo-actions'),
   todoClearDone: document.getElementById('todo-clear-done'),
-  memoText: document.getElementById('memo-text'),
-  memoStatus: document.getElementById('memo-status'),
+  memoInput: document.getElementById('memo-input'),
+  memoAdd: document.getElementById('memo-add'),
+  memoList: document.getElementById('memo-list'),
+  memoEmpty: document.getElementById('memo-empty'),
 };
 
 // ===== 定数 =====
@@ -448,7 +450,16 @@ async function loadTodos() {
     el.inTarget.value = store.lastTargetTime; // 前回の目標時刻を初期値に
     if (!S.target.running) applyTarget(false); // 状態へ反映（保存はしない）
   }
-  if (typeof store.memo === 'string') el.memoText.value = store.memo; // メモを復元
+  // メモ（一言ログ）を復元。旧形式(store.memo=文字列)は1件に変換
+  if (Array.isArray(store.memos)) {
+    memos = store.memos;
+  } else if (typeof store.memo === 'string' && store.memo.trim()) {
+    memos = [{ id: Date.now() + '-migr', text: store.memo, at: Date.now() }];
+    saveMemos();
+  } else {
+    memos = [];
+  }
+  renderMemos();
 }
 
 // タスクを保存（他の保存データは保持したまま todos だけ更新）
@@ -710,30 +721,80 @@ el.todoText.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-//  メモ（自動保存）
+//  メモ（一言を入力するとリストに残る）
 // ============================================================
-let memoTimer = null;
+let memos = []; // { id, text, at }
 
-async function saveMemo() {
+async function saveMemos() {
   try {
     const store = (await window.api?.getStore?.()) || {};
-    store.memo = el.memoText.value;
+    store.memos = memos;
     await window.api?.setStore?.(store);
-    el.memoStatus.textContent = '保存しました';
   } catch (e) {
     console.warn('メモの保存に失敗:', e);
-    el.memoStatus.textContent = '保存に失敗しました';
   }
 }
 
-el.memoText.addEventListener('input', () => {
-  el.memoStatus.textContent = '入力中…';
-  clearTimeout(memoTimer);
-  memoTimer = setTimeout(saveMemo, 500); // 入力が止まったら保存
-});
-el.memoText.addEventListener('blur', () => {
-  clearTimeout(memoTimer);
-  saveMemo();
+// 日時の短い表示（例: 9/15 14:23）
+function fmtMemoTime(ms) {
+  const d = new Date(ms);
+  const mm = d.getMonth() + 1;
+  const dd = d.getDate();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${mi}`;
+}
+
+function renderMemos() {
+  el.memoList.innerHTML = '';
+  el.memoEmpty.style.display = memos.length ? 'none' : 'block';
+  memos.forEach((m) => {
+    const li = document.createElement('li');
+    li.className = 'memo-item';
+
+    const body = document.createElement('div');
+    body.className = 'm-body';
+    const text = document.createElement('div');
+    text.className = 'm-text';
+    text.textContent = m.text; // ユーザー入力は textContent で安全に
+    const time = document.createElement('span');
+    time.className = 'm-time';
+    time.textContent = m.at ? fmtMemoTime(m.at) : '';
+    body.append(text, time);
+
+    const del = document.createElement('button');
+    del.className = 'memo-del';
+    del.textContent = '✕';
+    del.title = '削除';
+    del.addEventListener('click', () => deleteMemo(m.id));
+
+    li.append(body, del);
+    el.memoList.appendChild(li);
+  });
+}
+
+function addMemo() {
+  const text = el.memoInput.value.trim();
+  if (!text) return;
+  memos.unshift({ // 新しいものを上に
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    text,
+    at: Date.now(),
+  });
+  el.memoInput.value = '';
+  renderMemos();
+  saveMemos();
+}
+
+function deleteMemo(id) {
+  memos = memos.filter((m) => m.id !== id);
+  renderMemos();
+  saveMemos();
+}
+
+el.memoAdd.addEventListener('click', addMemo);
+el.memoInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addMemo();
 });
 
 // ===== 初期表示 =====

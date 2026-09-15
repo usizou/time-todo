@@ -454,26 +454,80 @@ body {
   margin-top: 24px;
 }
 
-/* --- メモ --- */
-.memo-text {
+/* --- メモ（一言ログ） --- */
+.memo-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+#memo-input {
   flex: 1;
-  width: 100%;
-  resize: none;
-  padding: 12px;
+  min-width: 0;
+  padding: 10px 12px;
   background: var(--panel);
   border: 1px solid var(--muted);
-  border-radius: 8px;
   color: var(--text);
+  border-radius: 8px;
   font-size: 14px;
-  line-height: 1.6;
-  font-family: inherit;
 }
-.memo-text:focus { outline: 1px solid var(--accent); }
-.memo-status {
-  height: 16px;
-  margin-top: 6px;
+#memo-add {
+  padding: 10px 16px;
+  background: var(--accent-2);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+#memo-add:hover { filter: brightness(1.1); }
+
+.memo-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.memo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 8px;
+}
+.memo-item .m-body {
+  flex: 1;
+  min-width: 0;
+}
+.memo-item .m-text {
+  font-size: 14px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.memo-item .m-time {
+  display: block;
+  margin-top: 3px;
   font-size: 11px;
   color: var(--muted);
-  text-align: right;
+}
+.memo-del {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 6px;
+  border-radius: 4px;
   flex-shrink: 0;
+}
+.memo-del:hover { color: var(--danger); }
+
+.memo-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 24px;
 }
