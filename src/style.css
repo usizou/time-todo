@@ -286,9 +286,18 @@ body {
   flex-shrink: 0;
 }
 .nt-text {
+  flex: 1;
+  min-width: 0;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nt-overdue {
+  margin-left: auto;
+  color: var(--danger);
+  font-size: 11px;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 .nt-empty { color: var(--muted); }

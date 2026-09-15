@@ -612,6 +612,18 @@ el.nextTodo.addEventListener('click', () => {
   }
 });
 
+// 予定時刻を過ぎたのに未完了のタスクがあるか（今日のHH:MMが現在より前）
+function hasOverdueTodo() {
+  const now = Date.now();
+  return todos.some((t) => {
+    if (t.done || !t.time) return false;
+    const [h, m] = t.time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.getTime() < now;
+  });
+}
+
 // 次にアラームが鳴る未完了タスク（時刻の次回発生が最も近いもの）
 function nextAlarmTodo() {
   const now = Date.now();
@@ -655,6 +667,14 @@ function updateNextTodo() {
   txt.className = 'nt-text';
   txt.textContent = t.text; // ユーザー入力は textContent で安全に
   el.nextTodo.append(label, time, txt);
+
+  // 予定超過した未完了タスクがあれば右端に表示
+  if (hasOverdueTodo()) {
+    const over = document.createElement('span');
+    over.className = 'nt-overdue';
+    over.textContent = '⚠ 予定超過あり';
+    el.nextTodo.appendChild(over);
+  }
 }
 
 function toggleTodo(id) {
