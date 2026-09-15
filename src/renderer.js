@@ -30,6 +30,7 @@ const el = {
   reset: document.getElementById('reset-btn'),
   chimeOn: document.getElementById('chime-on'),
   todoText: document.getElementById('todo-text'),
+  todoTime: document.getElementById('todo-time'),
   todoAdd: document.getElementById('todo-add'),
   todoList: document.getElementById('todo-list'),
   todoEmpty: document.getElementById('todo-empty'),
@@ -441,6 +442,19 @@ function renderTodos() {
     span.className = 'txt';
     span.textContent = t.text; // ユーザー入力は textContent で安全に表示
 
+    // アラーム時刻（任意）。変更・クリア可能
+    const time = document.createElement('input');
+    time.type = 'time';
+    time.step = 60;
+    time.className = 'todo-time';
+    time.value = t.time || '';
+    time.title = 'アラーム時刻（空欄でアラームなし）';
+    time.addEventListener('change', () => {
+      t.time = time.value;
+      t.firedOn = ''; // 時刻変更時はアラームを再アーム
+      saveTodos();
+    });
+
     const del = document.createElement('button');
     del.className = 'todo-del';
     del.textContent = '✕';
@@ -477,7 +491,7 @@ function renderTodos() {
       moveTodo(dragId, t.id, after);
     });
 
-    li.append(handle, cb, span, del);
+    li.append(handle, cb, span, time, del);
     el.todoList.appendChild(li);
   });
 }
@@ -507,11 +521,38 @@ function addTodo() {
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     text,
     done: false,
+    time: el.todoTime.value || '', // 空欄ならアラームなし
+    firedOn: '',
   });
   el.todoText.value = '';
+  el.todoTime.value = '';
   renderTodos();
   saveTodos();
 }
+
+// ===== タスクのアラーム（時刻を設定したタスクを毎分チェック） =====
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function checkAlarms() {
+  const d = new Date();
+  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const today = todayStr();
+  let changed = false;
+  todos.forEach((t) => {
+    if (!t.done && t.time && t.time === hhmm && t.firedOn !== today) {
+      beep();
+      notify('⏰ タスクの時刻です', t.text);
+      t.firedOn = today; // その日のうちの再発火を防ぐ
+      changed = true;
+    }
+  });
+  if (changed) saveTodos();
+}
+
+setInterval(checkAlarms, 15000); // 15秒ごとに確認（その分内に発火）
 
 function toggleTodo(id) {
   const t = todos.find((x) => x.id === id);
