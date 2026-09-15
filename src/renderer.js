@@ -560,6 +560,19 @@ function checkAlarms() {
 
 setInterval(checkAlarms, 15000); // 15秒ごとに確認（その分内に発火）
 
+// 「次の予定」表示を押したら To-Do タブへ移動し、該当タスクを一瞬強調
+el.nextTodo.addEventListener('click', () => {
+  const id = el.nextTodo.dataset.todoId;
+  if (!id) return;
+  document.querySelector('.tab[data-tab="todo"]').click();
+  const li = el.todoList.querySelector(`[data-id="${CSS.escape(id)}"]`);
+  if (li) {
+    li.scrollIntoView({ block: 'nearest' });
+    li.classList.add('flash');
+    setTimeout(() => li.classList.remove('flash'), 1200);
+  }
+});
+
 // 次にアラームが鳴る未完了タスク（時刻の次回発生が最も近いもの）
 function nextAlarmTodo() {
   const now = Date.now();
@@ -583,12 +596,16 @@ function updateNextTodo() {
   const t = nextAlarmTodo();
   el.nextTodo.textContent = '';
   if (!t) {
+    el.nextTodo.classList.remove('clickable');
+    delete el.nextTodo.dataset.todoId;
     const empty = document.createElement('span');
     empty.className = 'nt-empty';
     empty.textContent = '予定のタスクはありません';
     el.nextTodo.appendChild(empty);
     return;
   }
+  el.nextTodo.classList.add('clickable'); // 押すとTo-Doタブへ
+  el.nextTodo.dataset.todoId = t.id;
   const label = document.createElement('span');
   label.className = 'nt-label';
   label.textContent = '次の予定';
