@@ -121,22 +121,32 @@ rings.forEach((ring) => {
   ring.node.style.strokeDasharray = ring.c;
 });
 
-// 目盛りの区切り：各リングを単位数に分割（総12 / 時12 / 分60 / 秒60）
-const NOTCH = [
-  { id: 'notch-total', r: 92, seg: 12 },
-  { id: 'notch-hour',  r: 78, seg: 12 },
-  { id: 'notch-min',   r: 64, seg: 60 },
-  { id: 'notch-sec',   r: 50, seg: 60 },
-];
+// 目盛りの区切り：時/分/秒は固定（時12 / 分60 / 秒60）。総リングは分数ぶんに動的設定。
 const NOTCH_GAP = 3; // 区切りの太さ（viewBox単位）
-NOTCH.forEach((n) => {
-  const node = document.getElementById(n.id);
+function setNotch(id, r, seg) {
+  const node = document.getElementById(id);
   if (!node) return;
-  const c = 2 * Math.PI * n.r;
-  const unit = c / n.seg;
-  // 「gap分だけ背景色を塗る → 残りは透明」を繰り返して区切り線にする
-  node.style.strokeDasharray = `${NOTCH_GAP} ${unit - NOTCH_GAP}`;
-});
+  const c = 2 * Math.PI * r;
+  const unit = c / seg;
+  const gap = Math.min(NOTCH_GAP, unit * 0.4); // 細かすぎる時は区切りを細く
+  node.style.strokeDasharray = `${gap} ${unit - gap}`;
+}
+setNotch('notch-hour', 78, 12);
+setNotch('notch-min', 64, 60);
+setNotch('notch-sec', 50, 60);
+
+// 総リングの目盛りを「分ごと」に（カウントダウン/ポモドーロ用。分数=セグメント数）
+let lastTotalSeg = -1;
+function totalMinutes() {
+  return Math.max(1, Math.min(180, Math.round(S[mode].durationMs / 60000)));
+}
+function updateTotalNotch() {
+  if (mode === 'target') return; // 総リングは非表示
+  const mins = totalMinutes();
+  if (mins === lastTotalSeg) return;
+  lastTotalSeg = mins;
+  setNotch('notch-total', 92, mins);
+}
 
 // リングの進捗を設定（割合が増える=単位の境界を跨いだ時はアニメせず瞬時に戻す）
 function setRing(ring, ratio) {
@@ -201,7 +211,15 @@ function render() {
 
   // 4重リング：外→内(総/時/分/秒)。内側ほど速く回る
   const R = Math.max(0, s.remainingMs);
-  setRing(rings[0], s.durationMs > 0 ? R / s.durationMs : 0);      // 総時間
+  if (mode === 'target') {
+    setRing(rings[0], s.durationMs > 0 ? R / s.durationMs : 0);    // 総時間(非表示だが計算)
+  } else {
+    // カウントダウン/ポモドーロ：総リングは「分ごと」に離散的に減らす（はっきり減る）
+    updateTotalNotch();
+    const mins = totalMinutes();
+    const remMin = Math.ceil(R / 60000);
+    setRing(rings[0], Math.min(1, remMin / mins));
+  }
   setRing(rings[1], (R % HOUR_CYCLE) / HOUR_CYCLE);               // 時(12hで1周)
   setRing(rings[2], (R % MIN_CYCLE) / MIN_CYCLE);                 // 分(1hで1周)
   setRing(rings[3], (R % SEC_CYCLE) / SEC_CYCLE);                 // 秒(1minで1周)
