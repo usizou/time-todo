@@ -5,6 +5,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (typeof updateNextTodo === 'function') updateNextTodo(); // タイマー復帰時に同期
   });
 });
 
@@ -29,6 +30,7 @@ const el = {
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
   chimeOn: document.getElementById('chime-on'),
+  nextTodo: document.getElementById('next-todo'),
   todoText: document.getElementById('todo-text'),
   todoTime: document.getElementById('todo-time'),
   todoAdd: document.getElementById('todo-add'),
@@ -140,6 +142,8 @@ function render() {
   el.start.textContent = running ? '稼働中…' : (remainingMs < durationMs ? '再開' : 'スタート');
   el.start.disabled = running || remainingMs <= 0;
   el.pause.disabled = !running;
+
+  updateNextTodo();
 }
 
 // ===== ポモドーロ：フェーズの時間をセット =====
@@ -421,6 +425,7 @@ function renderTodos() {
   el.todoEmpty.style.display = todos.length ? 'none' : 'block';
   // 完了タスクがあるときだけ「完了したタスクを削除」を表示
   el.todoActions.style.display = todos.some((t) => t.done) ? 'flex' : 'none';
+  updateNextTodo(); // タイマー画面の「次の予定」も同期
 
   todos.forEach((t) => {
     const li = document.createElement('li');
@@ -550,9 +555,51 @@ function checkAlarms() {
     }
   });
   if (changed) saveTodos();
+  updateNextTodo(); // 時間経過で「次の予定」を更新
 }
 
 setInterval(checkAlarms, 15000); // 15秒ごとに確認（その分内に発火）
+
+// 次にアラームが鳴る未完了タスク（時刻の次回発生が最も近いもの）
+function nextAlarmTodo() {
+  const now = Date.now();
+  let best = null;
+  let bestTime = Infinity;
+  todos.forEach((t) => {
+    if (t.done || !t.time) return;
+    const [h, m] = t.time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1); // 過ぎていれば翌日
+    if (d.getTime() < bestTime) { bestTime = d.getTime(); best = t; }
+  });
+  return best;
+}
+
+// 「時刻まで」モードのときだけ、次の予定タスクを下部に表示
+function updateNextTodo() {
+  if (mode !== 'target') { el.nextTodo.style.display = 'none'; return; }
+  el.nextTodo.style.display = 'flex';
+  const t = nextAlarmTodo();
+  el.nextTodo.textContent = '';
+  if (!t) {
+    const empty = document.createElement('span');
+    empty.className = 'nt-empty';
+    empty.textContent = '予定のタスクはありません';
+    el.nextTodo.appendChild(empty);
+    return;
+  }
+  const label = document.createElement('span');
+  label.className = 'nt-label';
+  label.textContent = '次の予定';
+  const time = document.createElement('span');
+  time.className = 'nt-time';
+  time.textContent = '⏰ ' + t.time;
+  const txt = document.createElement('span');
+  txt.className = 'nt-text';
+  txt.textContent = t.text; // ユーザー入力は textContent で安全に
+  el.nextTodo.append(label, time, txt);
+}
 
 function toggleTodo(id) {
   const t = todos.find((x) => x.id === id);

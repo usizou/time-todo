@@ -250,6 +250,31 @@ body {
 .secondary { background: var(--panel); color: var(--text); }
 .secondary:hover:not(:disabled) { filter: brightness(1.2); }
 
+/* --- 次のTo-Do表示（時刻まで モード） --- */
+.next-todo {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 8px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nt-label { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.nt-time {
+  color: var(--ring-sec);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.nt-text {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nt-empty { color: var(--muted); }
+
 /* --- 毎正時チャイム --- */
 .chime-toggle {
   display: flex;
