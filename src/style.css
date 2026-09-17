@@ -66,15 +66,57 @@ body {
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
-.theme-toggle {
+.icon-btn {
   flex-shrink: 0;
   padding: 0 8px;
   background: transparent;
   border: none;
   cursor: pointer;
   font-size: 15px;
+  color: var(--muted);
   border-bottom: 3px solid transparent;
 }
+.icon-btn:hover { filter: brightness(1.2); }
+
+/* --- 設定オーバーレイ --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  z-index: 100;
+  overflow-y: auto;
+}
+.overlay-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg);
+  border: 1px solid var(--panel);
+  border-radius: 12px;
+  padding: 16px;
+}
+.overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.overlay-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.overlay-close:hover { color: var(--danger); }
 
 .tab-panel {
   display: none;

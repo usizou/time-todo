@@ -47,6 +47,9 @@ const el = {
   memoList: document.getElementById('memo-list'),
   memoEmpty: document.getElementById('memo-empty'),
   themeToggle: document.getElementById('theme-toggle'),
+  gearBtn: document.getElementById('gear-btn'),
+  settingsOverlay: document.getElementById('settings-overlay'),
+  settingsClose: document.getElementById('settings-close'),
   csvExport: document.getElementById('csv-export'),
   csvCopy: document.getElementById('csv-copy'),
   csvImportFile: document.getElementById('csv-import-file'),
@@ -1122,6 +1125,18 @@ function importCSVText(text) {
   syncMobile();
   dataStatus(`読み込み完了：To-Do ${nt.length}件・メモ ${nm.length}件`);
 }
+
+// 歯車メニュー（設定・データ）の開閉
+function openSettings() { el.settingsOverlay.hidden = false; }
+function closeSettings() { el.settingsOverlay.hidden = true; dataStatus(''); }
+el.gearBtn.addEventListener('click', openSettings);
+el.settingsClose.addEventListener('click', closeSettings);
+el.settingsOverlay.addEventListener('click', (e) => {
+  if (e.target === el.settingsOverlay) closeSettings(); // 背景クリックで閉じる
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !el.settingsOverlay.hidden) closeSettings();
+});
 
 el.csvExport.addEventListener('click', exportCSVFile);
 el.csvCopy.addEventListener('click', copyCSV);

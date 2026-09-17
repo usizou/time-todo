@@ -12,8 +12,8 @@
     <button class="tab active" data-tab="timer">⏱ タイマー</button>
     <button class="tab" data-tab="todo">✓ To-Do</button>
     <button class="tab" data-tab="memo">📝 メモ</button>
-    <button class="tab" data-tab="data">⇅ データ</button>
-    <button id="theme-toggle" class="theme-toggle" title="テーマ切替">☀️</button>
+    <button id="gear-btn" class="icon-btn" title="設定・データ">⚙</button>
+    <button id="theme-toggle" class="icon-btn" title="テーマ切替">☀️</button>
   </nav>
 
   <!-- タイマー画面 -->
@@ -134,8 +134,13 @@
     <div id="memo-empty" class="memo-empty">メモはまだありません</div>
   </section>
 
-  <!-- データ（CSVで書き出し/読み込み。別端末への移行用） -->
-  <section id="tab-data" class="tab-panel">
+  <!-- 設定・データ（歯車メニュー。CSVで書き出し/読み込み） -->
+  <div id="settings-overlay" class="overlay" hidden>
+    <div class="overlay-card">
+      <div class="overlay-head">
+        <span>設定・データ</span>
+        <button id="settings-close" class="overlay-close" title="閉じる">✕</button>
+      </div>
     <p class="data-desc">To-Do とメモを CSV で書き出し／読み込みできます。別の端末で読み込むと復元できます。</p>
 
     <div class="data-group">
@@ -157,7 +162,8 @@
     </div>
 
     <div id="data-status" class="data-status"></div>
-  </section>
+    </div>
+  </div>
 
   <script src="mobile.js"></script>
   <script src="renderer.js"></script>
