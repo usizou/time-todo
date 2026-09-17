@@ -79,8 +79,8 @@ function syncMobile() {
       items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: t.text, at: dt });
     }
   });
-  // 毎正時チャイム（次の24時間分を予約）
-  if (el.chimeOn.checked) {
+  // 毎正時チャイム（「時刻まで」カウントダウン中のみ・次の24時間分を予約）
+  if (el.chimeOn.checked && S.target.running) {
     const base = new Date();
     base.setMinutes(0, 0, 0);
     base.setHours(base.getHours() + 1);
@@ -295,6 +295,7 @@ function start() {
   }
   ensureTicker();
   render();
+  scheduleChime(); // 時刻までの稼働状態が変わったのでチャイムを再判定
   syncMobile();
 }
 
@@ -321,6 +322,7 @@ function pause() {
   s.running = false;
   s.remainingMs = Math.max(0, s.endTime - Date.now());
   render();
+  scheduleChime();
   syncMobile();
 }
 
@@ -337,6 +339,7 @@ function reset() {
     applyPreset(DEFAULT_SEC); // 起動時の初期値(5分)に戻す
   }
   render();
+  scheduleChime();
   syncMobile();
 }
 
@@ -361,6 +364,7 @@ function finishMode(m) {
     s.endTime = Date.now() + s.remainingMs;
   } else if (m === 'target') {
     notify('指定時刻になりました', '設定した時刻です ⏰');
+    scheduleChime(); // 時刻まで終了 → チャイム停止
   } else {
     notify('タイマー終了', '設定した時間が経過しました ⏱');
   }
@@ -500,22 +504,28 @@ function msToNextHour() {
   return next.getTime() - now.getTime();
 }
 
-// 次の正時に鳴らす予約（ドリフトを避けるため毎回再計算して連鎖）
+// チャイムが有効か：チェックON かつ「時刻まで」がカウントダウン中のときだけ
+function chimeActive() {
+  return el.chimeOn.checked && S.target.running;
+}
+
+// 次の正時に鳴らす予約（activeな間だけ連鎖。停止条件になったら止まる）
 function scheduleChime() {
   clearTimeout(chimeTimer);
+  chimeTimer = null;
+  if (!chimeActive()) return;
   chimeTimer = setTimeout(() => {
     beep();
     const h = new Date().getHours();
     notify('⏰ 正時のお知らせ', `${String(h).padStart(2, '0')}:00 になりました`);
-    scheduleChime();
+    scheduleChime(); // activeなら次の正時も予約
   }, msToNextHour());
 }
 
 // チャイムのON/OFF（save=false のときは保存しない＝復元時など）
 function setChime(enabled, save = true) {
   el.chimeOn.checked = enabled;
-  clearTimeout(chimeTimer);
-  if (enabled) scheduleChime();
+  scheduleChime(); // activeかどうかで開始/停止を判定
   if (save) saveChime(enabled);
 }
 
