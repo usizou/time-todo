@@ -205,6 +205,7 @@ flowchart LR
 新しいものが上、日時付き、削除可。旧形式の `store.memo` 文字列は起動時に1件へ移行）。
 本文中の `#タグ` は `parseTags()` で抽出して `tags` 配列に保持し、表示時は `stripTags()` で本文から除いてチップ表示。
 上部のタグバー（`#memo-filter`）とメモ内チップから `memoTagFilter` を切り替えて絞り込む。
+本文はクリックで `startEditMemo()` によりインライン編集（生テキストを編集し、確定時に `parseTags()` でタグを再取得）。
 タグは常に本文から導出できるため CSV スキーマ（`type,text,done,date,time,at`）は変更せず、読み込み時に再抽出する。
 
 ### 6.2 テーマ（ダーク / ライト）

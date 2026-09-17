@@ -1038,12 +1038,12 @@ function renderMemos() {
     body.className = 'm-body';
 
     const shown = stripTags(m.text);
-    if (shown) {
-      const text = document.createElement('div');
-      text.className = 'm-text';
-      text.textContent = shown; // ユーザー入力は textContent で安全に
-      body.appendChild(text);
-    }
+    const text = document.createElement('div');
+    text.className = 'm-text' + (shown ? '' : ' is-empty');
+    text.textContent = shown; // ユーザー入力は textContent で安全に（空ならCSSで案内表示）
+    text.title = 'クリックで編集';
+    text.addEventListener('click', () => startEditMemo(li, text, m));
+    body.appendChild(text);
 
     const tags = m.tags || [];
     if (tags.length) {
@@ -1094,6 +1094,31 @@ function deleteMemo(id) {
   memos = memos.filter((m) => m.id !== id);
   renderMemos();
   saveMemos();
+}
+
+// メモ本文のインライン編集（#タグ を含む生テキストを編集し、確定時にタグを取り直す）
+function startEditMemo(li, span, m) {
+  if (span.dataset.editing) return;
+  span.dataset.editing = '1';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'edit-input';
+  input.maxLength = 200;
+  input.value = m.text;
+  const commit = () => {
+    const v = input.value.trim();
+    if (v) { m.text = v; m.tags = parseTags(v); } // 空なら変更しない
+    renderMemos();
+    saveMemos();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    else if (e.key === 'Escape') { input.value = m.text; input.blur(); }
+  });
+  input.addEventListener('blur', commit);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
 }
 
 el.memoAdd.addEventListener('click', addMemo);

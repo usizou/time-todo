@@ -677,6 +677,14 @@ body {
   font-size: 14px;
   word-break: break-word;
   white-space: pre-wrap;
+  cursor: text;
+  border-radius: 4px;
+}
+.memo-item .m-text:hover { background: rgba(127, 127, 127, 0.12); }
+.memo-item .m-text.is-empty::before {
+  content: '（本文なし・クリックで編集）';
+  color: var(--muted);
+  font-style: italic;
 }
 .memo-item .m-time {
   display: block;
