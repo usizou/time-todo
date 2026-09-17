@@ -3,6 +3,15 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.usizou.timetodo"
     compileSdk rootProject.ext.compileSdkVersion
+    // 固定の署名鍵（毎回同じ印で署名 → 上書き更新できデータも保持）
+    signingConfigs {
+        fixed {
+            storeFile file('../keystore/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androidkey'
+            keyPassword 'android'
+        }
+    }
     defaultConfig {
         applicationId "com.usizou.timetodo"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -17,9 +26,13 @@ android {
         }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.fixed
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.fixed
         }
     }
 }
