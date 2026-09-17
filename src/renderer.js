@@ -616,7 +616,7 @@ async function loadTodos() {
   memos.forEach((m) => { if (!Array.isArray(m.tags)) m.tags = parseTags(m.text || ''); });
   renderMemos();
 
-  applyTheme(store.theme || 'dark'); // テーマを復元（既定はダーク）
+  applyTheme(store.theme || 'light'); // テーマを復元（既定はライト）
   syncMobile(); // スマホ：復元後に通知を予約
 }
 
@@ -1246,7 +1246,7 @@ el.csvImportText.addEventListener('click', () => importCSVText(el.csvPaste.value
 // ============================================================
 //  テーマ（ダーク / ライト）
 // ============================================================
-let theme = 'dark';
+let theme = 'light';
 
 function applyTheme(t) {
   theme = t === 'light' ? 'light' : 'dark';

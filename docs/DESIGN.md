@@ -211,8 +211,8 @@ flowchart LR
 ### 6.2 テーマ（ダーク / ライト）
 
 - 配色はすべて CSS 変数（`--bg`/`--panel`/`--text`/`--accent`/…/リング色）で定義。
-- 既定はダーク（`:root`）。`body.light` でライト（Catppuccin Latte 系）に上書き。
-- タブ右のトグルで切替。`store.theme` に保存し起動時に復元（既定はダーク）。
+- ベースはダーク（`:root`）。`body.light` でライト（Catppuccin Latte 系）に上書き。既定はライト（`index.html` の `<body class="light">` と `store.theme || 'light'`）。
+- タブ右のトグルで切替。`store.theme` に保存し起動時に復元（未設定なら既定のライト）。
 - `color-scheme` も `:root`(dark)/`body.light`(light) で切替え、ネイティブの時刻ピッカーも追従。
 
 ### 6.2 円形リングによる残量表現

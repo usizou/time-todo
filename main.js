@@ -30,7 +30,7 @@ function createWindow() {
     minWidth: 360,
     minHeight: 560,
     title: 'Time & To-Do',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#eff1f5',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
