@@ -79,6 +79,7 @@ body {
 .icon-btn:hover { filter: brightness(1.2); }
 
 /* --- 設定オーバーレイ --- */
+.overlay[hidden] { display: none; } /* hidden時は必ず非表示に */
 .overlay {
   position: fixed;
   inset: 0;
