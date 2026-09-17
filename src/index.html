@@ -127,9 +127,10 @@
   <!-- メモ画面（一言を入力すると下のリストに残る） -->
   <section id="tab-memo" class="tab-panel">
     <div class="memo-input">
-      <input id="memo-input" type="text" placeholder="一言メモを入力…" maxlength="200" />
+      <input id="memo-input" type="text" placeholder="一言メモを入力…（#タグ で分類）" maxlength="200" />
       <button id="memo-add">追加</button>
     </div>
+    <div id="memo-filter" class="memo-filter"></div>
     <ul id="memo-list" class="memo-list"></ul>
     <div id="memo-empty" class="memo-empty">メモはまだありません</div>
   </section>

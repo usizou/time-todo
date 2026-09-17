@@ -702,3 +702,50 @@ body {
   font-size: 13px;
   margin-top: 24px;
 }
+
+/* タグの絞り込みバー */
+.memo-filter {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.tag-chip {
+  padding: 4px 10px;
+  background: var(--panel);
+  border: 1px solid var(--muted);
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.tag-chip:hover { border-color: var(--accent); }
+.tag-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+/* メモ内に表示する小さなタグ */
+.m-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+.tag-chip.mini {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: transparent;
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+.tag-chip.mini:hover { filter: brightness(1.15); }
+.tag-chip.mini.active {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: var(--bg);
+}

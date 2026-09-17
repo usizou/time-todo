@@ -46,6 +46,7 @@ const el = {
   memoAdd: document.getElementById('memo-add'),
   memoList: document.getElementById('memo-list'),
   memoEmpty: document.getElementById('memo-empty'),
+  memoFilter: document.getElementById('memo-filter'),
   themeToggle: document.getElementById('theme-toggle'),
   gearBtn: document.getElementById('gear-btn'),
   settingsOverlay: document.getElementById('settings-overlay'),
@@ -611,6 +612,8 @@ async function loadTodos() {
   } else {
     memos = [];
   }
+  // 旧データにタグが無ければ本文から復元
+  memos.forEach((m) => { if (!Array.isArray(m.tags)) m.tags = parseTags(m.text || ''); });
   renderMemos();
 
   applyTheme(store.theme || 'dark'); // テーマを復元（既定はダーク）
@@ -952,7 +955,24 @@ el.todoTime.addEventListener('input', () => refreshPh(el.todoTime));
 // ============================================================
 //  メモ（一言を入力するとリストに残る）
 // ============================================================
-let memos = []; // { id, text, at }
+let memos = []; // { id, text, at, tags:[] }
+let memoTagFilter = null; // 選択中の絞り込みタグ（null=すべて）
+
+// テキストから #タグ を抽出（重複除去・#は付けない）
+function parseTags(text) {
+  const out = [];
+  const re = /#([^\s#、,]+)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const t = m[1];
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out;
+}
+// 表示用に #タグ を除いた本文（チップで別に見せるため）
+function stripTags(text) {
+  return text.replace(/#[^\s#、,]+/g, '').replace(/\s{2,}/g, ' ').trim();
+}
 
 async function saveMemos() {
   try {
@@ -973,22 +993,77 @@ function fmtMemoTime(ms) {
   return `${mm}/${dd} ${hh}:${mi}`;
 }
 
+// メモに含まれる全タグ（出現順・重複除去）
+function allMemoTags() {
+  const out = [];
+  memos.forEach((m) => (m.tags || []).forEach((t) => { if (!out.includes(t)) out.push(t); }));
+  return out;
+}
+
+// 絞り込みバー（タグが1つ以上あるときだけ表示）
+function renderMemoFilter() {
+  const tags = allMemoTags();
+  el.memoFilter.innerHTML = '';
+  if (!tags.length) { el.memoFilter.style.display = 'none'; memoTagFilter = null; return; }
+  if (memoTagFilter && !tags.includes(memoTagFilter)) memoTagFilter = null; // 消えたタグを解除
+  el.memoFilter.style.display = 'flex';
+
+  const mkChip = (label, tag) => {
+    const b = document.createElement('button');
+    b.className = 'tag-chip' + (memoTagFilter === tag ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => { memoTagFilter = tag; renderMemos(); });
+    return b;
+  };
+  el.memoFilter.appendChild(mkChip('すべて', null));
+  tags.forEach((t) => el.memoFilter.appendChild(mkChip('#' + t, t)));
+}
+
 function renderMemos() {
+  renderMemoFilter();
   el.memoList.innerHTML = '';
-  el.memoEmpty.style.display = memos.length ? 'none' : 'block';
-  memos.forEach((m) => {
+  const list = memoTagFilter
+    ? memos.filter((m) => (m.tags || []).includes(memoTagFilter))
+    : memos;
+  el.memoEmpty.style.display = list.length ? 'none' : 'block';
+  el.memoEmpty.textContent = memoTagFilter
+    ? `#${memoTagFilter} のメモはありません`
+    : 'メモはまだありません';
+
+  list.forEach((m) => {
     const li = document.createElement('li');
     li.className = 'memo-item';
 
     const body = document.createElement('div');
     body.className = 'm-body';
-    const text = document.createElement('div');
-    text.className = 'm-text';
-    text.textContent = m.text; // ユーザー入力は textContent で安全に
+
+    const shown = stripTags(m.text);
+    if (shown) {
+      const text = document.createElement('div');
+      text.className = 'm-text';
+      text.textContent = shown; // ユーザー入力は textContent で安全に
+      body.appendChild(text);
+    }
+
+    const tags = m.tags || [];
+    if (tags.length) {
+      const tagWrap = document.createElement('div');
+      tagWrap.className = 'm-tags';
+      tags.forEach((t) => {
+        const chip = document.createElement('button');
+        chip.className = 'tag-chip mini' + (memoTagFilter === t ? ' active' : '');
+        chip.textContent = '#' + t;
+        chip.title = `#${t} で絞り込み`;
+        chip.addEventListener('click', () => { memoTagFilter = t; renderMemos(); });
+        tagWrap.appendChild(chip);
+      });
+      body.appendChild(tagWrap);
+    }
+
     const time = document.createElement('span');
     time.className = 'm-time';
     time.textContent = m.at ? fmtMemoTime(m.at) : '';
-    body.append(text, time);
+    body.appendChild(time);
 
     const del = document.createElement('button');
     del.className = 'memo-del';
@@ -1008,6 +1083,7 @@ function addMemo() {
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     text,
     at: Date.now(),
+    tags: parseTags(text),
   });
   el.memoInput.value = '';
   renderMemos();
@@ -1096,7 +1172,7 @@ function importCSVText(text) {
     const type = (cols[idx.type] || '').trim().toLowerCase();
     const txt = cols[idx.text] || '';
     if (type === 'memo') {
-      nm.push({ id: uid(), text: txt, at: parseInt(cols[idx.at]) || Date.now() });
+      nm.push({ id: uid(), text: txt, at: parseInt(cols[idx.at]) || Date.now(), tags: parseTags(txt) });
     } else {
       nt.push({ id: uid(), text: txt, done: (cols[idx.done] || '').trim().toLowerCase() === 'true', date: cols[idx.date] || '', time: cols[idx.time] || '', firedOn: '' });
     }
