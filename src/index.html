@@ -12,6 +12,7 @@
     <button class="tab active" data-tab="timer">⏱ タイマー</button>
     <button class="tab" data-tab="todo">✓ To-Do</button>
     <button class="tab" data-tab="memo">📝 メモ</button>
+    <button class="tab" data-tab="data">⇅ データ</button>
     <button id="theme-toggle" class="theme-toggle" title="テーマ切替">☀️</button>
   </nav>
 
@@ -131,6 +132,31 @@
     </div>
     <ul id="memo-list" class="memo-list"></ul>
     <div id="memo-empty" class="memo-empty">メモはまだありません</div>
+  </section>
+
+  <!-- データ（CSVで書き出し/読み込み。別端末への移行用） -->
+  <section id="tab-data" class="tab-panel">
+    <p class="data-desc">To-Do とメモを CSV で書き出し／読み込みできます。別の端末で読み込むと復元できます。</p>
+
+    <div class="data-group">
+      <div class="data-title">書き出し</div>
+      <div class="data-row">
+        <button id="csv-export">CSVを保存</button>
+        <button id="csv-copy">CSVをコピー</button>
+      </div>
+    </div>
+
+    <div class="data-group">
+      <div class="data-title">読み込み（現在の内容を置き換えます）</div>
+      <div class="data-row">
+        <button id="csv-import-file">ファイルから読み込み</button>
+        <input id="csv-file" type="file" accept=".csv,text/csv,text/plain" hidden />
+      </div>
+      <textarea id="csv-paste" class="csv-paste" placeholder="ここに CSV を貼り付けて読み込むこともできます"></textarea>
+      <button id="csv-import-text">貼り付けたCSVを読み込み</button>
+    </div>
+
+    <div id="data-status" class="data-status"></div>
   </section>
 
   <script src="mobile.js"></script>

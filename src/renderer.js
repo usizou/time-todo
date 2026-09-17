@@ -47,6 +47,13 @@ const el = {
   memoList: document.getElementById('memo-list'),
   memoEmpty: document.getElementById('memo-empty'),
   themeToggle: document.getElementById('theme-toggle'),
+  csvExport: document.getElementById('csv-export'),
+  csvCopy: document.getElementById('csv-copy'),
+  csvImportFile: document.getElementById('csv-import-file'),
+  csvFile: document.getElementById('csv-file'),
+  csvPaste: document.getElementById('csv-paste'),
+  csvImportText: document.getElementById('csv-import-text'),
+  dataStatus: document.getElementById('data-status'),
 };
 
 // ===== 保存（Electronならstore.json / それ以外はlocalStorage） =====
@@ -1015,6 +1022,120 @@ el.memoAdd.addEventListener('click', addMemo);
 el.memoInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addMemo();
 });
+
+// ============================================================
+//  データ（CSV 書き出し / 読み込み）
+// ============================================================
+function csvEscape(v) {
+  v = String(v == null ? '' : v);
+  return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+}
+function buildCSV() {
+  const rows = [['type', 'text', 'done', 'date', 'time', 'at']];
+  todos.forEach((t) => rows.push(['todo', t.text, t.done ? 'true' : 'false', t.date || '', t.time || '', '']));
+  memos.forEach((m) => rows.push(['memo', m.text, '', '', '', m.at || '']));
+  return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n');
+}
+// CSVテキストを2次元配列に（引用符・改行対応）
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function dataStatus(msg) {
+  if (el.dataStatus) el.dataStatus.textContent = msg;
+}
+
+function exportCSVFile() {
+  try {
+    const blob = new Blob([buildCSV()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'time-todo.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    dataStatus('CSVを書き出しました');
+  } catch (e) {
+    dataStatus('書き出しに失敗しました（「コピー」をお試しください）');
+  }
+}
+async function copyCSV() {
+  try {
+    await navigator.clipboard.writeText(buildCSV());
+    dataStatus('CSVをコピーしました');
+  } catch (e) {
+    dataStatus('コピーに失敗しました');
+  }
+}
+// CSVテキストを取り込み、現在のTo-Do/メモを置き換える
+function importCSVText(text) {
+  if (!text || !text.trim()) { dataStatus('CSVが空です'); return; }
+  const rows = parseCSV(text);
+  if (!rows.length) { dataStatus('読み込めるデータがありません'); return; }
+  const head = rows[0].map((s) => s.trim().toLowerCase());
+  const hasHeader = head[0] === 'type';
+  const idx = hasHeader
+    ? { type: head.indexOf('type'), text: head.indexOf('text'), done: head.indexOf('done'), date: head.indexOf('date'), time: head.indexOf('time'), at: head.indexOf('at') }
+    : { type: 0, text: 1, done: 2, date: 3, time: 4, at: 5 };
+  const nt = [], nm = [];
+  const uid = () => Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  for (let r = hasHeader ? 1 : 0; r < rows.length; r++) {
+    const cols = rows[r];
+    if (!cols.length || cols.every((c) => c === '')) continue;
+    const type = (cols[idx.type] || '').trim().toLowerCase();
+    const txt = cols[idx.text] || '';
+    if (type === 'memo') {
+      nm.push({ id: uid(), text: txt, at: parseInt(cols[idx.at]) || Date.now() });
+    } else {
+      nt.push({ id: uid(), text: txt, done: (cols[idx.done] || '').trim().toLowerCase() === 'true', date: cols[idx.date] || '', time: cols[idx.time] || '', firedOn: '' });
+    }
+  }
+  if (!nt.length && !nm.length) { dataStatus('有効な行がありませんでした'); return; }
+  if (!confirm(`読み込むと現在の内容を置き換えます。\nTo-Do ${nt.length}件・メモ ${nm.length}件を読み込みますか？`)) {
+    dataStatus('読み込みを中止しました');
+    return;
+  }
+  todos = nt;
+  memos = nm;
+  sortTodosByTime();
+  renderTodos();
+  renderMemos();
+  saveTodos();
+  saveMemos();
+  syncMobile();
+  dataStatus(`読み込み完了：To-Do ${nt.length}件・メモ ${nm.length}件`);
+}
+
+el.csvExport.addEventListener('click', exportCSVFile);
+el.csvCopy.addEventListener('click', copyCSV);
+el.csvImportFile.addEventListener('click', () => el.csvFile.click());
+el.csvFile.addEventListener('change', () => {
+  const f = el.csvFile.files && el.csvFile.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => importCSVText(String(rd.result || ''));
+  rd.onerror = () => dataStatus('ファイルの読み込みに失敗しました');
+  rd.readAsText(f);
+  el.csvFile.value = '';
+});
+el.csvImportText.addEventListener('click', () => importCSVText(el.csvPaste.value));
 
 // ============================================================
 //  テーマ（ダーク / ライト）
