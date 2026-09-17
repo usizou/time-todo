@@ -775,6 +775,19 @@ function moveTodo(fromId, toId, after) {
   saveTodos();
 }
 
+// 未完了を予定の早い順に並べ替え（時刻なしは後ろ、完了は末尾）
+function sortTodosByTime() {
+  todos.sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1; // 完了は後ろ
+    const da = taskDateTime(a);
+    const db = taskDateTime(b);
+    if (da == null && db == null) return 0;
+    if (da == null) return 1;   // 時刻なしは後ろ
+    if (db == null) return -1;
+    return da - db;             // 早い順
+  });
+}
+
 function addTodo() {
   const text = el.todoText.value.trim();
   if (!text) return;
@@ -791,6 +804,7 @@ function addTodo() {
   el.todoTime.value = '';
   refreshPh(el.todoDate);
   refreshPh(el.todoTime);
+  sortTodosByTime(); // 未完了を早い順に並べ替え
   renderTodos();
   saveTodos();
 }
