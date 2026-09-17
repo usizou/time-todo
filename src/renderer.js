@@ -51,7 +51,6 @@ const el = {
   settingsOverlay: document.getElementById('settings-overlay'),
   settingsClose: document.getElementById('settings-close'),
   csvExport: document.getElementById('csv-export'),
-  csvCopy: document.getElementById('csv-copy'),
   csvImportFile: document.getElementById('csv-import-file'),
   csvFile: document.getElementById('csv-file'),
   csvPaste: document.getElementById('csv-paste'),
@@ -1079,36 +1078,6 @@ function exportCSVFile() {
     dataStatus('書き出しに失敗しました（「コピー」をお試しください）');
   }
 }
-async function copyCSV() {
-  const text = buildCSV();
-  // 1) Electron（file://ではnavigator.clipboardが使えないためメイン経由）
-  if (window.api && window.api.copyText) {
-    try { await window.api.copyText(text); dataStatus('CSVをコピーしました'); return; } catch (e) { /* fallthrough */ }
-  }
-  // 2) 通常の Clipboard API
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-      dataStatus('CSVをコピーしました');
-      return;
-    }
-  } catch (e) { /* fallthrough */ }
-  // 3) 旧方式（textarea + execCommand）
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.top = '-1000px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    dataStatus(ok ? 'CSVをコピーしました' : 'コピーできませんでした（貼り付け欄で手動コピーしてください）');
-  } catch (e) {
-    dataStatus('コピーできませんでした');
-  }
-}
 // CSVテキストを取り込み、現在のTo-Do/メモを置き換える
 function importCSVText(text) {
   if (!text || !text.trim()) { dataStatus('CSVが空です'); return; }
@@ -1161,7 +1130,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 el.csvExport.addEventListener('click', exportCSVFile);
-el.csvCopy.addEventListener('click', copyCSV);
 el.csvImportFile.addEventListener('click', () => el.csvFile.click());
 el.csvFile.addEventListener('change', () => {
   const f = el.csvFile.files && el.csvFile.files[0];
