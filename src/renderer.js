@@ -542,6 +542,13 @@ function refreshPh(input) {
   if (input) input.classList.toggle('is-empty', !input.value);
 }
 
+// 今日の日付(YYYY-MM-DD)
+function todayYMD() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
 // タスクの予定日時(ms)。date未指定は今日扱い。timeが無ければnull
 function taskDateTime(t) {
   if (!t.time) return null;
@@ -770,7 +777,7 @@ function addTodo() {
     firedOn: '',
   });
   el.todoText.value = '';
-  el.todoDate.value = '';
+  el.todoDate.value = todayYMD(); // 追加後も日付は今日を既定に
   el.todoTime.value = '';
   refreshPh(el.todoDate);
   refreshPh(el.todoTime);
@@ -902,7 +909,8 @@ el.todoClearDone.addEventListener('click', clearCompleted);
 el.todoText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addTodo();
 });
-// 追加欄の日付/時刻：例示(プレースホルダ)の初期表示と更新
+// 追加欄の日付/時刻：日付の初期値は今日。例示(プレースホルダ)の初期表示と更新
+el.todoDate.value = todayYMD();
 refreshPh(el.todoDate);
 refreshPh(el.todoTime);
 el.todoDate.addEventListener('input', () => refreshPh(el.todoDate));
