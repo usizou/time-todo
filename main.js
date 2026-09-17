@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -46,6 +46,11 @@ function createWindow() {
 // レンダラーからのデータ読み書き
 ipcMain.handle('store:get', () => loadStore());
 ipcMain.handle('store:set', (_e, data) => saveStore(data));
+
+// クリップボードへコピー（Electronは file:// で navigator.clipboard が使えないため）
+ipcMain.handle('clipboard:write', (_e, text) => {
+  try { clipboard.writeText(String(text ?? '')); return true; } catch { return false; }
+});
 
 // タイマー終了時のOS通知
 ipcMain.on('notify', (_e, { title, body }) => {

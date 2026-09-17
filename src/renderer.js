@@ -1080,11 +1080,33 @@ function exportCSVFile() {
   }
 }
 async function copyCSV() {
+  const text = buildCSV();
+  // 1) Electron（file://ではnavigator.clipboardが使えないためメイン経由）
+  if (window.api && window.api.copyText) {
+    try { await window.api.copyText(text); dataStatus('CSVをコピーしました'); return; } catch (e) { /* fallthrough */ }
+  }
+  // 2) 通常の Clipboard API
   try {
-    await navigator.clipboard.writeText(buildCSV());
-    dataStatus('CSVをコピーしました');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      dataStatus('CSVをコピーしました');
+      return;
+    }
+  } catch (e) { /* fallthrough */ }
+  // 3) 旧方式（textarea + execCommand）
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    dataStatus(ok ? 'CSVをコピーしました' : 'コピーできませんでした（貼り付け欄で手動コピーしてください）');
   } catch (e) {
-    dataStatus('コピーに失敗しました');
+    dataStatus('コピーできませんでした');
   }
 }
 // CSVテキストを取り込み、現在のTo-Do/メモを置き換える
