@@ -1163,9 +1163,23 @@ function dataStatus(msg) {
   if (el.dataStatus) el.dataStatus.textContent = msg;
 }
 
-function exportCSVFile() {
+async function exportCSVFile() {
+  const csv = buildCSV();
+  // Android（Capacitor）は共有シートで書き出す（ブラウザのダウンロードが効かないため）
+  if (window.Mobile && window.Mobile.isNative && window.Mobile.isNative() && window.Mobile.exportCSV) {
+    try {
+      await window.Mobile.exportCSV(csv, 'time-todo.csv');
+      dataStatus('共有メニューから保存/送信できます（Drive・ファイルなど）');
+    } catch (e) {
+      // 共有を閉じただけの場合も例外になることがある
+      const msg = e && e.message ? e.message : '';
+      dataStatus(/cancel/i.test(msg) ? '共有をキャンセルしました' : '共有に失敗しました');
+    }
+    return;
+  }
+  // デスクトップ / ブラウザは通常のダウンロード
   try {
-    const blob = new Blob([buildCSV()], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1174,9 +1188,9 @@ function exportCSVFile() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    dataStatus('CSVを書き出しました');
+    dataStatus('CSVを書き出しました（ダウンロードフォルダ）');
   } catch (e) {
-    dataStatus('書き出しに失敗しました（「コピー」をお試しください）');
+    dataStatus('書き出しに失敗しました');
   }
 }
 // CSVテキストを取り込み、現在のTo-Do/メモを置き換える

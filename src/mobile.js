@@ -6,6 +6,8 @@
   const isNative = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
   const LN = () => (cap && cap.Plugins ? cap.Plugins.LocalNotifications : null);
   const APP = () => (cap && cap.Plugins ? cap.Plugins.App : null);
+  const FS = () => (cap && cap.Plugins ? cap.Plugins.Filesystem : null);
+  const SHARE = () => (cap && cap.Plugins ? cap.Plugins.Share : null);
 
   async function requestPermission() {
     const ln = LN();
@@ -50,10 +52,34 @@
     try { app.addListener('resume', cb); } catch (e) { /* noop */ }
   }
 
+  // CSVをキャッシュ領域に書き出して、Androidの共有シートで送る（Driveやファイルアプリへ保存できる）
+  async function exportCSV(text, filename) {
+    const fs = FS();
+    const share = SHARE();
+    if (!fs || !share) throw new Error('共有プラグインが見つかりません');
+    const name = filename || 'time-todo.csv';
+    // 共有用の一時ファイル（アプリのキャッシュ領域）
+    const w = await fs.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+    let uri = w && w.uri;
+    if (!uri) {
+      const g = await fs.getUri({ path: name, directory: 'CACHE' });
+      uri = g && g.uri;
+    }
+    await share.share({
+      title: 'Time & To-Do CSV',
+      text: 'To-Do / メモのバックアップ',
+      url: uri,
+      files: [uri],
+      dialogTitle: 'CSVを共有',
+    });
+    return true;
+  }
+
   window.Mobile = {
     isNative: () => isNative,
     requestPermission,
     scheduleAll,
     onResume,
+    exportCSV,
   };
 })();

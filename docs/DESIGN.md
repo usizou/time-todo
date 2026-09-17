@@ -208,6 +208,11 @@ flowchart LR
 本文はクリックで `startEditMemo()` によりインライン編集（生テキストを編集し、確定時に `parseTags()` でタグを再取得）。
 タグは常に本文から導出できるため CSV スキーマ（`type,text,done,date,time,at`）は変更せず、読み込み時に再抽出する。
 
+CSV 書き出し（`exportCSVFile()`）は実行環境で分岐する。デスクトップ／ブラウザは `Blob` + `<a download>` でダウンロード。
+Android（Capacitor）は WebView が `blob:` ダウンロードを扱えないため、`window.Mobile.exportCSV()` 経由で
+`@capacitor/filesystem` でキャッシュ領域へ書き出し、`@capacitor/share` の共有シートで Drive／ファイル等へ渡す。
+両プラグインは `npx cap sync android`（CI）で Android プロジェクトに取り込まれる。
+
 ### 6.2 テーマ（ダーク / ライト）
 
 - 配色はすべて CSS 変数（`--bg`/`--panel`/`--text`/`--accent`/…/リング色）で定義。
