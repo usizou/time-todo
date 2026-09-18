@@ -376,16 +376,25 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nt-overdue {
-  margin-left: auto;
-  color: var(--danger);
-  font-size: 11px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
 .nt-empty { color: var(--muted); }
 .next-todo.clickable { cursor: pointer; }
 .next-todo.clickable:hover { filter: brightness(1.2); }
+
+/* 予定超過ブロック（2行表示） */
+.overdue-todo {
+  margin-top: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  border-left: 3px solid var(--danger);
+}
+.nt-overdue-label { color: var(--danger); font-weight: 600; }
+.nt-line2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 
 /* --- 毎正時チャイム --- */
 .chime-toggle {

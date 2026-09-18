@@ -34,6 +34,7 @@ const el = {
   chimeOn: document.getElementById('chime-on'),
   chimeToggle: document.querySelector('.chime-toggle'),
   nextTodo: document.getElementById('next-todo'),
+  overdueTodo: document.getElementById('overdue-todo'),
   todoText: document.getElementById('todo-text'),
   todoTime: document.getElementById('todo-time'),
   todoDate: document.getElementById('todo-date'),
@@ -902,27 +903,18 @@ function checkAlarms() {
 setInterval(checkAlarms, 15000); // 15秒ごとに確認（その分内に発火）
 
 // 「次の予定」表示を押したら To-Do タブへ移動（予定が無くても飛ぶ）。該当タスクは一瞬強調
-el.nextTodo.addEventListener('click', () => {
+function jumpToTodo(id) {
   document.querySelector('.tab[data-tab="todo"]').click();
-  const id = el.nextTodo.dataset.todoId;
-  if (!id) return; // 予定タスクが無いときはタブ移動のみ
+  if (!id) return; // タスクが無いときはタブ移動のみ
   const li = el.todoList.querySelector(`[data-id="${CSS.escape(id)}"]`);
   if (li) {
     li.scrollIntoView({ block: 'nearest' });
     li.classList.add('flash');
     setTimeout(() => li.classList.remove('flash'), 1200);
   }
-});
-
-// 予定超過（今日の予定時刻を過ぎたのに未完了）のタスクがあるか
-function hasOverdueTodo() {
-  const now = Date.now();
-  return todos.some((t) => {
-    if (t.done) return false;
-    const dt = taskDateTime(t);
-    return dt && isTodayMs(dt) && dt < now;
-  });
 }
+el.nextTodo.addEventListener('click', () => jumpToTodo(el.nextTodo.dataset.todoId));
+el.overdueTodo.addEventListener('click', () => jumpToTodo(el.overdueTodo.dataset.todoId));
 
 // 「次の予定」に出すタスク：今日・未完了のうち、今に最も近いもの
 // （その日のうちなら終日表示／翌日以降は翌日になるまで出さない／時刻が来ても完了するまで消えない）
@@ -942,7 +934,7 @@ function nextAlarmTodo() {
 
 // 「時刻まで」モードのときだけ、次の予定タスクを下部に表示
 function updateNextTodo() {
-  if (mode !== 'target') { el.nextTodo.style.display = 'none'; return; }
+  if (mode !== 'target') { el.nextTodo.style.display = 'none'; el.overdueTodo.style.display = 'none'; return; }
   el.nextTodo.style.display = 'flex';
   const t = nextAlarmTodo();
   el.nextTodo.textContent = '';
@@ -953,27 +945,57 @@ function updateNextTodo() {
     empty.className = 'nt-empty';
     empty.textContent = '予定のタスクはありません';
     el.nextTodo.appendChild(empty);
-    return;
+  } else {
+    el.nextTodo.dataset.todoId = t.id;
+    const label = document.createElement('span');
+    label.className = 'nt-label';
+    label.textContent = '次の予定';
+    const time = document.createElement('span');
+    time.className = 'nt-time';
+    time.textContent = '⏰ ' + t.time;
+    const txt = document.createElement('span');
+    txt.className = 'nt-text';
+    txt.textContent = stripTags(t.text) || t.text; // #タグは除いて表示
+    el.nextTodo.append(label, time, txt);
   }
-  el.nextTodo.dataset.todoId = t.id;
+
+  // 予定超過した未完了タスク（次の予定に出ているものは除く）を1件表示
+  updateOverdueTodo(t ? t.id : null);
+}
+
+// 予定時刻を過ぎた未完了タスクのうち、最も過ぎているものを1件返す（excludeId は除外）
+function firstOverdueTodo(excludeId) {
+  const now = Date.now();
+  return todos
+    .filter((t) => {
+      if (t.done || t.id === excludeId) return false;
+      const dt = taskDateTime(t);
+      return dt && isTodayMs(dt) && dt < now;
+    })
+    .sort((a, b) => taskDateTime(a) - taskDateTime(b))[0] || null;
+}
+
+// 予定超過ブロック（2行・クリックで該当タスクへ）を更新
+function updateOverdueTodo(excludeId) {
+  const t = firstOverdueTodo(excludeId);
+  if (!t) { el.overdueTodo.style.display = 'none'; delete el.overdueTodo.dataset.todoId; return; }
+  el.overdueTodo.style.display = 'flex';
+  el.overdueTodo.classList.add('clickable');
+  el.overdueTodo.dataset.todoId = t.id;
+  el.overdueTodo.textContent = '';
   const label = document.createElement('span');
-  label.className = 'nt-label';
-  label.textContent = '次の予定';
+  label.className = 'nt-label nt-overdue-label';
+  label.textContent = '⚠ 未完了のタスク';
+  const line2 = document.createElement('span');
+  line2.className = 'nt-line2';
   const time = document.createElement('span');
   time.className = 'nt-time';
   time.textContent = '⏰ ' + t.time;
   const txt = document.createElement('span');
   txt.className = 'nt-text';
-  txt.textContent = stripTags(t.text) || t.text; // #タグは除いて表示
-  el.nextTodo.append(label, time, txt);
-
-  // 予定超過した未完了タスクがあれば右端に表示
-  if (hasOverdueTodo()) {
-    const over = document.createElement('span');
-    over.className = 'nt-overdue';
-    over.textContent = '⚠ 予定超過あり';
-    el.nextTodo.appendChild(over);
-  }
+  txt.textContent = stripTags(t.text) || t.text;
+  line2.append(time, txt);
+  el.overdueTodo.append(label, line2);
 }
 
 function toggleTodo(id) {
