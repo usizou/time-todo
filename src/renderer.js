@@ -1244,6 +1244,9 @@ function parseICS(text) {
     else if (key === 'DTEND') cur.end = parseICSDate(val, params);
     else if (key === 'RRULE') cur.rrule = val;
     else if (key === 'EXDATE') val.split(',').forEach((v) => cur.exset.add(ymdOf(parseICSDate(v, params).dt)));
+    else if (key === 'UID') cur.uid = val;
+    else if (key === 'RECURRENCE-ID') cur.recurrenceId = parseICSDate(val, params);
+    else if (key === 'STATUS') cur.status = val.trim().toUpperCase();
   }
   return events;
 }
@@ -1309,10 +1312,36 @@ function expandEvent(ev, startMs, endMs) {
   return out.sort((a, b) => a.startMs - b.startMs);
 }
 
-// 範囲内の全予定（終日を先に、時間指定を時刻順に）
+// 1イベントの基準日時のみを範囲内で1件返す（RRULE展開しない。上書きインスタンス用）
+function baseOccurrence(ev, startMs, endMs) {
+  if (!ev.start) return [];
+  const base = ev.start.dt.getTime();
+  const durMs = (ev.end && ev.end.dt) ? Math.max(0, ev.end.dt.getTime() - base) : (ev.start.allDay ? 86400000 : 3600000);
+  if (base < endMs && base + durMs > startMs) {
+    return [{ summary: ev.summary || '(無題)', allDay: ev.start.allDay, startMs: base, endMs: base + durMs, calName: ev.calName || '' }];
+  }
+  return [];
+}
+
+// 範囲内の全予定（繰り返しの1件変更=RECURRENCE-ID上書き／削除=CANCELLEDを考慮）
 function occurrencesInRange(startMs, endMs) {
+  // 上書き対象（uid+その日）を集める。元シリーズのその日分はスキップする
+  const overridden = new Set();
+  calRawEvents.forEach((ev) => { if (ev.recurrenceId) overridden.add((ev.uid || '') + '|' + ymdOf(ev.recurrenceId.dt)); });
   const all = [];
-  calRawEvents.forEach((ev) => { expandEvent(ev, startMs, endMs).forEach((o) => all.push(o)); });
+  calRawEvents.forEach((ev) => {
+    if (ev.status === 'CANCELLED') return; // 削除された予定/回は出さない
+    if (ev.recurrenceId) {
+      // 変更された単一の回（自身のDTSTART/タイトルで表示。RRULEは展開しない）
+      baseOccurrence(ev, startMs, endMs).forEach((o) => all.push(o));
+      return;
+    }
+    // 通常/繰り返しマスター。上書き済みの日はスキップ
+    expandEvent(ev, startMs, endMs).forEach((o) => {
+      if (overridden.has((ev.uid || '') + '|' + ymdOf(new Date(o.startMs)))) return;
+      all.push(o);
+    });
+  });
   return all.sort((a, b) => (a.allDay === b.allDay ? a.startMs - b.startMs : (a.allDay ? -1 : 1)));
 }
 function eventsForYmd(ymd) {

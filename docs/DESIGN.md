@@ -316,6 +316,7 @@ npm run dist # exe 生成
 - **取得**：`fetchICS(url)` が環境で分岐。Electron はメイン経由（`net:fetchText` IPC、file:// のCORS回避）、モバイルは `CapacitorHttp`、それ以外は `fetch`。
 - **パース**：`parseICS()` が VEVENT を抽出（行折返し解除、`SUMMARY`/`DTSTART`/`DTEND`/`RRULE`/`EXDATE`）。`parseICSDate()` は `VALUE=DATE`＝終日、`...Z`＝UTC、その他＝ローカル近似（TZIDは未変換）。
 - **繰り返し展開**：`expandEvent(ev, start, end)` が `FREQ=DAILY/WEEKLY/MONTHLY/YEARLY` ＋ `INTERVAL/COUNT/UNTIL/BYDAY(週)/EXDATE` を範囲内で展開（複雑な `MONTHLY BYDAY` 等は近似・取りこぼしあり）。`occurrencesInRange()` で全カレンダー分をまとめる。
+- **1回だけの変更/削除**：`RECURRENCE-ID` を持つVEVENTは該当回の上書き。`occurrencesInRange` は `uid|日付` で上書き対象を集め、マスターのその日分をスキップして上書き側（自身のDTSTART/タイトル）を出す。`STATUS:CANCELLED` は出さない（削除回）。これで「タイトル変更で新旧両方出る」「削除した回が残る」を解消。
 - **表示**：時刻までタブ上部 `#today-events` にその日の予定を最大2行（1行目=終日、2行目=時間指定。超過分は「他◯」）。📅ボタン（`#cal-overlay`）で月間カレンダー（予定日にドット、日曜/祝日は赤・土曜は青）＋選択日の予定一覧。
 - **更新**：起動時・📅を開いた時・購読変更時、および30分ごとに `refreshCalendars()`。
 - **CSV**：`type=cal, text=URL, done=有効, date=表示名` の行で書き出し/読み込み（既存6列スキーマ内）。
