@@ -14,7 +14,7 @@
     <button class="tab" data-tab="reminder">⏰ 通知</button>
     <button class="tab" data-tab="memo">📝 メモ</button>
     <button id="gear-btn" class="icon-btn" title="設定・データ">⚙</button>
-    <button id="theme-toggle" class="icon-btn" title="テーマ切替">☀️</button>
+    <button id="cal-btn" class="icon-btn" title="カレンダー">📅</button>
   </nav>
 
   <!-- タイマー画面 -->
@@ -103,6 +103,9 @@
       <span>🔔 毎正時（XX:00）にチャイム</span>
     </label>
 
+    <!-- その日のカレンダー予定（時刻まで モードのみ・最大2行） -->
+    <div id="today-events" class="today-events" style="display:none"></div>
+
     <!-- 次にアラームが鳴るTo-Do（時刻まで モードのみ表示） -->
     <div id="next-todo" class="next-todo" style="display:none"></div>
     <!-- 予定時刻を過ぎた未完了タスク（1件・時刻まで モードのみ表示） -->
@@ -172,7 +175,23 @@
         <span>設定・データ</span>
         <button id="settings-close" class="overlay-close" title="閉じる">✕</button>
       </div>
-    <p class="data-desc">To-Do とメモを CSV で書き出し／読み込みできます。別の端末で読み込むと復元できます。</p>
+    <div class="data-group">
+      <div class="data-title">テーマ</div>
+      <div class="data-row">
+        <button id="theme-toggle" class="settings-btn">☀️ ライト / ダーク切替</button>
+      </div>
+    </div>
+
+    <div class="data-group">
+      <div class="data-title">Googleカレンダー（ICS購読・読み取り専用）</div>
+      <p class="data-desc">GoogleカレンダーのURL（設定→カレンダー→「iCal形式の限定公開URL」）を貼って追加。複数登録できます。</p>
+      <ul id="cal-list" class="cal-cfg-list"></ul>
+      <input id="cal-name" type="text" class="cal-cfg-input" placeholder="表示名（任意・例: 仕事）" maxlength="40" />
+      <textarea id="cal-url" class="cal-cfg-input" placeholder="ICSのURL（https://calendar.google.com/.../basic.ics）"></textarea>
+      <button id="cal-add">カレンダーを追加</button>
+    </div>
+
+    <p class="data-desc">To-Do・メモ・リマインダー・カレンダー設定を CSV で書き出し／読み込みできます。別の端末で読み込むと復元できます。</p>
 
     <div class="data-group">
       <div class="data-title">書き出し</div>
@@ -192,6 +211,27 @@
     </div>
 
     <div id="data-status" class="data-status"></div>
+    </div>
+  </div>
+
+  <!-- カレンダー（月間表示＋選択日の予定） -->
+  <div id="cal-overlay" class="overlay" hidden>
+    <div class="overlay-card">
+      <div class="overlay-head">
+        <span>カレンダー</span>
+        <button id="cal-close" class="overlay-close" title="閉じる">✕</button>
+      </div>
+      <div class="cal-nav">
+        <button id="cal-prev" class="cal-navbtn" title="前の月">‹</button>
+        <span id="cal-title" class="cal-title"></span>
+        <button id="cal-next" class="cal-navbtn" title="次の月">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <div id="cal-day-title" class="cal-day-title"></div>
+      <div id="cal-day-events" class="cal-day-events"></div>
     </div>
   </div>
 

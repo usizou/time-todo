@@ -58,6 +58,20 @@ const el = {
   remAdd: document.getElementById('rem-add'),
   remList: document.getElementById('rem-list'),
   remEmpty: document.getElementById('rem-empty'),
+  todayEvents: document.getElementById('today-events'),
+  calBtn: document.getElementById('cal-btn'),
+  calOverlay: document.getElementById('cal-overlay'),
+  calClose: document.getElementById('cal-close'),
+  calPrev: document.getElementById('cal-prev'),
+  calNext: document.getElementById('cal-next'),
+  calTitle: document.getElementById('cal-title'),
+  calGrid: document.getElementById('cal-grid'),
+  calDayTitle: document.getElementById('cal-day-title'),
+  calDayEvents: document.getElementById('cal-day-events'),
+  calList: document.getElementById('cal-list'),
+  calName: document.getElementById('cal-name'),
+  calUrl: document.getElementById('cal-url'),
+  calAdd: document.getElementById('cal-add'),
   themeToggle: document.getElementById('theme-toggle'),
   gearBtn: document.getElementById('gear-btn'),
   settingsOverlay: document.getElementById('settings-overlay'),
@@ -667,6 +681,12 @@ async function loadTodos() {
   reminders = Array.isArray(store.reminders) ? store.reminders : [];
   renderReminders();
 
+  // カレンダー購読を復元して取得
+  calendars = Array.isArray(store.calendars) ? store.calendars : [];
+  renderCalendarSettings();
+  renderTodayEvents();
+  if (calendars.some((c) => c.enabled && c.url)) refreshCalendars();
+
   applyTheme(store.theme || 'light'); // テーマを復元（既定はライト）
   syncMobile(); // スマホ：復元後に通知を予約
 }
@@ -1159,6 +1179,277 @@ el.remDate.addEventListener('input', () => refreshPh(el.remDate));
 el.remTime.addEventListener('input', () => refreshPh(el.remTime));
 updateReminderInputs();
 
+// ============================================================
+//  Googleカレンダー（複数ICS購読・読み取り専用）
+// ============================================================
+let calendars = [];       // { id, name, url, enabled }
+let calRawEvents = [];     // パース済みVEVENT（複数カレンダー分）
+let calLastFetch = 0;
+let calViewYear, calViewMonth, calSelectedYmd;
+
+// 外部URLからICSテキストを取得（Electronメイン / Capacitor / 通常fetch）
+async function fetchICS(url) {
+  if (window.api && window.api.fetchText) {
+    const r = await window.api.fetchText(url);
+    if (r && r.ok) return r.text;
+    throw new Error(r && (r.error || ('HTTP ' + r.status)) || 'fetch失敗');
+  }
+  if (window.Mobile && window.Mobile.isNative() && window.Mobile.fetchText) {
+    return await window.Mobile.fetchText(url);
+  }
+  const res = await fetch(url);
+  return await res.text();
+}
+
+// ICSの行折り返し(RFC5545)を戻す
+function unfoldICS(t) { return t.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, ''); }
+
+// ICS日時をパース。{ allDay, dt(Date) }
+function parseICSDate(val, params) {
+  val = (val || '').trim();
+  const dOnly = /^(\d{4})(\d{2})(\d{2})$/.exec(val);
+  if (dOnly || (params && params.VALUE === 'DATE')) {
+    const m = dOnly || /^(\d{4})(\d{2})(\d{2})/.exec(val);
+    return { allDay: true, dt: new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0, 0) };
+  }
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/.exec(val);
+  if (m) {
+    if (m[7] === 'Z') return { allDay: false, dt: new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])) };
+    return { allDay: false, dt: new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) }; // TZID等はローカル近似
+  }
+  const t = Date.parse(val);
+  return { allDay: false, dt: isNaN(t) ? new Date() : new Date(t) };
+}
+
+function parseICS(text) {
+  const lines = unfoldICS(text).split('\n');
+  const events = [];
+  let cur = null;
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') { cur = { exset: new Set() }; continue; }
+    if (line === 'END:VEVENT') { if (cur && cur.start) events.push(cur); cur = null; continue; }
+    if (!cur) continue;
+    const idx = line.indexOf(':');
+    if (idx < 0) continue;
+    const left = line.slice(0, idx);
+    const val = line.slice(idx + 1);
+    const semi = left.indexOf(';');
+    const key = semi < 0 ? left : left.slice(0, semi);
+    const params = {};
+    if (semi >= 0) left.slice(semi + 1).split(';').forEach((p) => { const eq = p.indexOf('='); if (eq >= 0) params[p.slice(0, eq)] = p.slice(eq + 1); });
+    if (key === 'SUMMARY') cur.summary = val.replace(/\\,/g, ',').replace(/\\n/gi, ' ').replace(/\\\\/g, '\\');
+    else if (key === 'DTSTART') cur.start = parseICSDate(val, params);
+    else if (key === 'DTEND') cur.end = parseICSDate(val, params);
+    else if (key === 'RRULE') cur.rrule = val;
+    else if (key === 'EXDATE') val.split(',').forEach((v) => cur.exset.add(ymdOf(parseICSDate(v, params).dt)));
+  }
+  return events;
+}
+
+// 1イベントを [startMs,endMs) の範囲に展開（繰り返しは主要パターンのみ）
+function expandEvent(ev, startMs, endMs) {
+  if (!ev.start) return [];
+  const base = ev.start.dt.getTime();
+  const durMs = (ev.end && ev.end.dt) ? Math.max(0, ev.end.dt.getTime() - base) : (ev.start.allDay ? 86400000 : 3600000);
+  const out = [];
+  const mk = (t) => ({ summary: ev.summary || '(無題)', allDay: ev.start.allDay, startMs: t, endMs: t + durMs, calName: ev.calName || '' });
+  const inRange = (t) => (t < endMs) && (t + durMs > startMs);
+  const notExcluded = (t) => !ev.exset || !ev.exset.has(ymdOf(new Date(t)));
+  if (!ev.rrule) {
+    if (inRange(base) && notExcluded(base)) out.push(mk(base));
+    return out;
+  }
+  const R = {};
+  ev.rrule.split(';').forEach((p) => { const i = p.indexOf('='); if (i > 0) R[p.slice(0, i)] = p.slice(i + 1); });
+  const freq = R.FREQ;
+  const interval = Math.max(1, parseInt(R.INTERVAL || '1'));
+  const count = R.COUNT ? parseInt(R.COUNT) : null;
+  const until = R.UNTIL ? parseICSDate(R.UNTIL, {}).dt.getTime() : null;
+  const dayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+  const byday = R.BYDAY ? R.BYDAY.split(',').map((s) => dayMap[s.slice(-2)]).filter((x) => x != null) : null;
+  const bd = ev.start.dt;
+  let n = 0;
+  const LIMIT = 3000;
+  if (freq === 'WEEKLY' && byday && byday.length) {
+    let ws = new Date(bd); ws.setDate(ws.getDate() - ws.getDay()); // 週初(日)
+    for (let i = 0; i < LIMIT; i++) {
+      let stop = false;
+      for (const wd of byday.slice().sort((a, b) => a - b)) {
+        const occ = new Date(ws); occ.setDate(ws.getDate() + wd);
+        occ.setHours(bd.getHours(), bd.getMinutes(), bd.getSeconds(), 0);
+        const t = occ.getTime();
+        if (t < base) continue;
+        if (until && t > until) { stop = true; break; }
+        if (t > endMs) { stop = true; break; }
+        if (count && n >= count) { stop = true; break; }
+        n++;
+        if (inRange(t) && notExcluded(t)) out.push(mk(t));
+      }
+      if (stop) break;
+      ws.setDate(ws.getDate() + 7 * interval);
+    }
+    return out.sort((a, b) => a.startMs - b.startMs);
+  }
+  let cur = new Date(bd);
+  for (let i = 0; i < LIMIT; i++) {
+    if (count && n >= count) break;
+    const t = cur.getTime();
+    if (until && t > until) break;
+    if (t > endMs) break;
+    n++;
+    if (inRange(t) && notExcluded(t)) out.push(mk(t));
+    if (freq === 'DAILY') cur.setDate(cur.getDate() + interval);
+    else if (freq === 'WEEKLY') cur.setDate(cur.getDate() + 7 * interval);
+    else if (freq === 'MONTHLY') cur.setMonth(cur.getMonth() + interval);
+    else if (freq === 'YEARLY') cur.setFullYear(cur.getFullYear() + interval);
+    else break;
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
+}
+
+// 範囲内の全予定（終日を先に、時間指定を時刻順に）
+function occurrencesInRange(startMs, endMs) {
+  const all = [];
+  calRawEvents.forEach((ev) => { expandEvent(ev, startMs, endMs).forEach((o) => all.push(o)); });
+  return all.sort((a, b) => (a.allDay === b.allDay ? a.startMs - b.startMs : (a.allDay ? -1 : 1)));
+}
+function eventsForYmd(ymd) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const s = new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+  return occurrencesInRange(s, s + 86400000);
+}
+function fmtHM(ms) { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+
+async function saveCalendars() {
+  try { STORE.calendars = calendars; await setStore(STORE); } catch (e) { console.warn('カレンダー設定の保存に失敗:', e); }
+}
+
+// 全カレンダーを取得してパース（購読URLは複数）
+async function refreshCalendars() {
+  const list = calendars.filter((c) => c.enabled && c.url);
+  const raw = [];
+  for (const c of list) {
+    try {
+      const text = await fetchICS(c.url.trim());
+      parseICS(text).forEach((ev) => { ev.calName = c.name || ''; raw.push(ev); });
+    } catch (e) { console.warn('カレンダー取得失敗:', c.url, e); }
+  }
+  calRawEvents = raw;
+  calLastFetch = Date.now();
+  renderTodayEvents();
+  if (!el.calOverlay.hidden) renderCalendar();
+}
+
+// 時刻までタブ上部：その日の予定を最大2行（1行目=終日、2行目=時間指定）
+function renderTodayEvents() {
+  const box = el.todayEvents;
+  if (mode !== 'target') { box.style.display = 'none'; return; }
+  const evs = eventsForYmd(ymdOf(new Date()));
+  const allday = evs.filter((e) => e.allDay);
+  const timed = evs.filter((e) => !e.allDay);
+  box.innerHTML = '';
+  const lines = [];
+  if (allday.length) lines.push('📅 ' + allday[0].summary + (allday.length > 1 ? ` 他${allday.length - 1}` : ''));
+  if (timed.length) lines.push('🕐 ' + fmtHM(timed[0].startMs) + ' ' + timed[0].summary + (timed.length > 1 ? ` 他${timed.length - 1}` : ''));
+  if (!lines.length) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  lines.forEach((tx) => { const d = document.createElement('div'); d.className = 'te-line'; d.textContent = tx; box.appendChild(d); });
+}
+
+// ---- 月間カレンダー ----
+function openCalendar() {
+  el.calOverlay.hidden = false;
+  const n = new Date();
+  calViewYear = n.getFullYear(); calViewMonth = n.getMonth(); calSelectedYmd = ymdOf(n);
+  renderCalendar();
+  refreshCalendars(); // 開いたら最新化
+}
+function closeCalendar() { el.calOverlay.hidden = true; }
+
+function renderCalendar() {
+  el.calTitle.textContent = `${calViewYear}年${calViewMonth + 1}月`;
+  el.calGrid.innerHTML = '';
+  const first = new Date(calViewYear, calViewMonth, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  // その月の予定がある日を集計
+  const mStart = new Date(calViewYear, calViewMonth, 1).getTime();
+  const mEnd = new Date(calViewYear, calViewMonth + 1, 1).getTime();
+  const evDays = new Set(occurrencesInRange(mStart, mEnd).map((o) => ymdOf(new Date(o.startMs))));
+  const todayY = ymdOf(new Date());
+  for (let i = 0; i < startDow; i++) { const c = document.createElement('div'); c.className = 'cal-cell empty'; el.calGrid.appendChild(c); }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ymd = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const cell = document.createElement('button');
+    cell.className = 'cal-cell';
+    if (ymd === todayY) cell.classList.add('today');
+    if (ymd === calSelectedYmd) cell.classList.add('selected');
+    const dow = new Date(calViewYear, calViewMonth, day).getDay();
+    if (dow === 0 || HOLIDAYS.has(ymd)) cell.classList.add('sun');
+    else if (dow === 6) cell.classList.add('sat');
+    const num = document.createElement('span'); num.className = 'cal-daynum'; num.textContent = day;
+    cell.appendChild(num);
+    if (evDays.has(ymd)) { const dot = document.createElement('span'); dot.className = 'cal-dot'; cell.appendChild(dot); }
+    cell.addEventListener('click', () => { calSelectedYmd = ymd; renderCalendar(); });
+    el.calGrid.appendChild(cell);
+  }
+  renderDayEvents();
+}
+function renderDayEvents() {
+  const [y, m, d] = calSelectedYmd.split('-').map(Number);
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][new Date(y, m - 1, d).getDay()];
+  el.calDayTitle.textContent = `${m}/${d}(${wd}) の予定`;
+  el.calDayEvents.innerHTML = '';
+  const evs = eventsForYmd(calSelectedYmd);
+  if (!evs.length) { const e = document.createElement('div'); e.className = 'cal-noev'; e.textContent = '予定はありません'; el.calDayEvents.appendChild(e); return; }
+  evs.forEach((o) => {
+    const row = document.createElement('div'); row.className = 'cal-ev';
+    const t = document.createElement('span'); t.className = 'cal-ev-time'; t.textContent = o.allDay ? '終日' : fmtHM(o.startMs);
+    const s = document.createElement('span'); s.className = 'cal-ev-sum'; s.textContent = o.summary + (o.calName ? `（${o.calName}）` : '');
+    row.append(t, s);
+    el.calDayEvents.appendChild(row);
+  });
+}
+
+// ---- 設定：カレンダー購読の管理 ----
+function renderCalendarSettings() {
+  el.calList.innerHTML = '';
+  calendars.forEach((c) => {
+    const li = document.createElement('li');
+    li.className = 'cal-cfg-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = c.enabled;
+    cb.addEventListener('change', () => { c.enabled = cb.checked; saveCalendars(); refreshCalendars(); });
+    const name = document.createElement('span');
+    name.className = 'cal-cfg-name';
+    name.textContent = c.name || '(名称なし)';
+    const del = document.createElement('button');
+    del.className = 'cal-cfg-del'; del.textContent = '✕'; del.title = '削除';
+    del.addEventListener('click', () => {
+      calendars = calendars.filter((x) => x.id !== c.id);
+      renderCalendarSettings(); saveCalendars(); refreshCalendars();
+    });
+    li.append(cb, name, del);
+    el.calList.appendChild(li);
+  });
+}
+function addCalendar() {
+  const url = el.calUrl.value.trim();
+  if (!url) { el.calUrl.focus(); return; }
+  calendars.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), name: el.calName.value.trim(), url, enabled: true });
+  el.calName.value = ''; el.calUrl.value = '';
+  renderCalendarSettings(); saveCalendars(); refreshCalendars();
+}
+
+el.calBtn.addEventListener('click', openCalendar);
+el.calClose.addEventListener('click', closeCalendar);
+el.calOverlay.addEventListener('click', (e) => { if (e.target === el.calOverlay) closeCalendar(); });
+el.calPrev.addEventListener('click', () => { calViewMonth--; if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; } renderCalendar(); });
+el.calNext.addEventListener('click', () => { calViewMonth++; if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; } renderCalendar(); });
+el.calAdd.addEventListener('click', addCalendar);
+el.todayEvents.addEventListener('click', openCalendar);
+setInterval(() => { if (calendars.some((c) => c.enabled && c.url)) refreshCalendars(); }, 30 * 60 * 1000); // 30分毎に更新
+
 // 「次の予定」表示を押したら To-Do タブへ移動（予定が無くても飛ぶ）。該当タスクは一瞬強調
 function jumpToTodo(id) {
   document.querySelector('.tab[data-tab="todo"]').click();
@@ -1192,6 +1483,7 @@ function nextAlarmTodo() {
 
 // 「時刻まで」モードのときだけ、次の予定タスクを下部に表示
 function updateNextTodo() {
+  if (typeof renderTodayEvents === 'function') renderTodayEvents(); // その日の予定も同期
   if (mode !== 'target') { el.nextTodo.style.display = 'none'; el.overdueTodo.style.display = 'none'; return; }
   el.nextTodo.style.display = 'flex';
   const t = nextAlarmTodo();
@@ -1494,6 +1786,8 @@ function buildCSV() {
   const rows = [['type', 'text', 'done', 'date', 'time', 'at']];
   todos.forEach((t) => rows.push(['todo', t.text, t.done ? 'true' : 'false', t.date || '', t.time || '', '']));
   memos.forEach((m) => rows.push(['memo', m.text, '', '', '', m.at || '']));
+  // カレンダー購読：text=URL, done=有効, date=表示名
+  calendars.forEach((c) => rows.push(['cal', c.url, c.enabled ? 'true' : 'false', c.name || '', '', '']));
   return rows.map((r) => r.map(csvEscape).join(',')).join('\r\n');
 }
 // CSVテキストを2次元配列に（引用符・改行対応）
@@ -1569,7 +1863,7 @@ function importCSVText(text) {
   const idx = hasHeader
     ? { type: head.indexOf('type'), text: head.indexOf('text'), done: head.indexOf('done'), date: head.indexOf('date'), time: head.indexOf('time'), at: head.indexOf('at') }
     : { type: 0, text: 1, done: 2, date: 3, time: 4, at: 5 };
-  const nt = [], nm = [];
+  const nt = [], nm = [], nc = [];
   const uid = () => Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   for (let r = hasHeader ? 1 : 0; r < rows.length; r++) {
     const cols = rows[r];
@@ -1578,24 +1872,30 @@ function importCSVText(text) {
     const txt = cols[idx.text] || '';
     if (type === 'memo') {
       nm.push({ id: uid(), text: txt, at: parseInt(cols[idx.at]) || Date.now(), tags: parseTags(txt) });
+    } else if (type === 'cal') {
+      if (txt) nc.push({ id: uid(), url: txt, name: cols[idx.date] || '', enabled: (cols[idx.done] || '').trim().toLowerCase() !== 'false' });
     } else {
       nt.push({ id: uid(), text: txt, done: (cols[idx.done] || '').trim().toLowerCase() === 'true', date: cols[idx.date] || '', time: cols[idx.time] || '', firedOn: '', tags: parseTags(txt) });
     }
   }
-  if (!nt.length && !nm.length) { dataStatus('有効な行がありませんでした'); return; }
-  if (!confirm(`読み込むと現在の内容を置き換えます。\nTo-Do ${nt.length}件・メモ ${nm.length}件を読み込みますか？`)) {
+  if (!nt.length && !nm.length && !nc.length) { dataStatus('有効な行がありませんでした'); return; }
+  if (!confirm(`読み込むと現在の内容を置き換えます。\nTo-Do ${nt.length}件・メモ ${nm.length}件・カレンダー ${nc.length}件を読み込みますか？`)) {
     dataStatus('読み込みを中止しました');
     return;
   }
   todos = nt;
   memos = nm;
+  calendars = nc;
   sortTodosByTime();
   renderTodos();
   renderMemos();
+  renderCalendarSettings();
   saveTodos();
   saveMemos();
+  saveCalendars();
+  refreshCalendars();
   syncMobile();
-  dataStatus(`読み込み完了：To-Do ${nt.length}件・メモ ${nm.length}件`);
+  dataStatus(`読み込み完了：To-Do ${nt.length}件・メモ ${nm.length}件・カレンダー ${nc.length}件`);
 }
 
 // 歯車メニュー（設定・データ）の開閉
@@ -1632,7 +1932,7 @@ function applyTheme(t) {
   theme = t === 'light' ? 'light' : 'dark';
   document.body.classList.toggle('light', theme === 'light');
   // ボタンは「切り替え先」を表示（ダーク中は太陽、ライト中は月）
-  el.themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+  el.themeToggle.textContent = theme === 'light' ? '🌙 ダークにする' : '☀️ ライトにする';
 }
 
 async function saveTheme() {

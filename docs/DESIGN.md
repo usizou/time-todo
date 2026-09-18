@@ -225,7 +225,7 @@ Android（Capacitor）は WebView が `blob:` ダウンロードを扱えない�
 
 - 配色はすべて CSS 変数（`--bg`/`--panel`/`--text`/`--accent`/…/リング色）で定義。
 - ベースはダーク（`:root`）。`body.light` でライト（Catppuccin Latte 系）に上書き。既定はライト（`index.html` の `<body class="light">` と `store.theme || 'light'`）。
-- タブ右のトグルで切替。`store.theme` に保存し起動時に復元（未設定なら既定のライト）。
+- ⚙メニュー内のボタン（`#theme-toggle`）で切替。`store.theme` に保存し起動時に復元（未設定なら既定のライト）。
 - `color-scheme` も `:root`(dark)/`body.light`(light) で切替え、ネイティブの時刻ピッカーも追従。
 
 ### 6.2 円形リングによる残量表現
@@ -309,6 +309,16 @@ npm run dist # exe 生成
   - タイマーの毎正時チャイム同様、アプリ起動中のみ有効（第13.3章に将来のバックグラウンド対応方針）
 - `store.todos` への永続化（起動時に復元）
 - ユーザー入力は `textContent` で描画し、HTML インジェクションを防止
+
+## 10.6 Googleカレンダー表示（複数ICS購読・読み取り専用）
+
+- `store.calendars` に `{ id, name, url, enabled }` の配列で保存。⚙メニューで追加/削除/オンオフ。
+- **取得**：`fetchICS(url)` が環境で分岐。Electron はメイン経由（`net:fetchText` IPC、file:// のCORS回避）、モバイルは `CapacitorHttp`、それ以外は `fetch`。
+- **パース**：`parseICS()` が VEVENT を抽出（行折返し解除、`SUMMARY`/`DTSTART`/`DTEND`/`RRULE`/`EXDATE`）。`parseICSDate()` は `VALUE=DATE`＝終日、`...Z`＝UTC、その他＝ローカル近似（TZIDは未変換）。
+- **繰り返し展開**：`expandEvent(ev, start, end)` が `FREQ=DAILY/WEEKLY/MONTHLY/YEARLY` ＋ `INTERVAL/COUNT/UNTIL/BYDAY(週)/EXDATE` を範囲内で展開（複雑な `MONTHLY BYDAY` 等は近似・取りこぼしあり）。`occurrencesInRange()` で全カレンダー分をまとめる。
+- **表示**：時刻までタブ上部 `#today-events` にその日の予定を最大2行（1行目=終日、2行目=時間指定。超過分は「他◯」）。📅ボタン（`#cal-overlay`）で月間カレンダー（予定日にドット、日曜/祝日は赤・土曜は青）＋選択日の予定一覧。
+- **更新**：起動時・📅を開いた時・購読変更時、および30分ごとに `refreshCalendars()`。
+- **CSV**：`type=cal, text=URL, done=有効, date=表示名` の行で書き出し/読み込み（既存6列スキーマ内）。
 
 ## 10.5 リマインダー（繰り返し通知）
 

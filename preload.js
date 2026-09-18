@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('api', {
   setStore: (data) => ipcRenderer.invoke('store:set', data),
   notify: (title, body) => ipcRenderer.send('notify', { title, body }),
   copyText: (text) => ipcRenderer.invoke('clipboard:write', text),
+  fetchText: (url) => ipcRenderer.invoke('net:fetchText', url),
 });

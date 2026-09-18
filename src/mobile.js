@@ -52,6 +52,17 @@
     try { app.addListener('resume', cb); } catch (e) { /* noop */ }
   }
 
+  // 外部URLからテキスト取得（ICS購読用。CapacitorHttp でCORSを回避）
+  async function fetchText(url) {
+    const http = cap && cap.Plugins ? (cap.Plugins.CapacitorHttp || cap.Plugins.Http) : null;
+    if (http && http.get) {
+      const res = await http.get({ url, responseType: 'text' });
+      return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    }
+    const r = await fetch(url);
+    return await r.text();
+  }
+
   // CSVをキャッシュ領域に書き出して、Androidの共有シートで送る（Driveやファイルアプリへ保存できる）
   async function exportCSV(text, filename) {
     const fs = FS();
@@ -81,5 +92,6 @@
     scheduleAll,
     onResume,
     exportCSV,
+    fetchText,
   };
 })();

@@ -52,6 +52,17 @@ ipcMain.handle('clipboard:write', (_e, text) => {
   try { clipboard.writeText(String(text ?? '')); return true; } catch { return false; }
 });
 
+// URLからテキスト取得（ICS購読用。file:// のレンダラーはCORSで外部取得できないためメイン経由）
+ipcMain.handle('net:fetchText', async (_e, url) => {
+  try {
+    const res = await fetch(String(url));
+    if (!res.ok) return { ok: false, status: res.status };
+    return { ok: true, text: await res.text() };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
 // タイマー終了時のOS通知
 ipcMain.on('notify', (_e, { title, body }) => {
   if (Notification.isSupported()) {
