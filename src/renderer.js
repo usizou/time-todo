@@ -1,3 +1,34 @@
+// ===== 汎用の確認ダイアログ（Promiseでtrue/false） =====
+// ネイティブ confirm() は環境により出ないことがあるためアプリ内で表示
+function uiConfirm(message) {
+  return new Promise((resolve) => {
+    const ov = document.getElementById('confirm-overlay');
+    const msg = document.getElementById('confirm-msg');
+    const ok = document.getElementById('confirm-ok');
+    const cancel = document.getElementById('confirm-cancel');
+    if (!ov || !ok || !cancel) { resolve(window.confirm(message)); return; } // 保険
+    msg.textContent = message;
+    ov.hidden = false;
+    const done = (val) => {
+      ov.hidden = true;
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      ov.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    const onOk = () => done(true);
+    const onCancel = () => done(false);
+    const onBackdrop = (e) => { if (e.target === ov) done(false); };
+    const onKey = (e) => { if (e.key === 'Escape') done(false); else if (e.key === 'Enter') done(true); };
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    ov.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey);
+    ok.focus();
+  });
+}
+
 // ===== タブ切り替え =====
 document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
@@ -1531,7 +1562,7 @@ function renderDayEvents() {
     const t = document.createElement('span'); t.className = 'cal-ev-time'; t.textContent = o.allDay ? '終日' : fmtHM(o.startMs);
     const s = document.createElement('span'); s.className = 'cal-ev-sum'; s.textContent = o.summary + (o.calName ? `（${o.calName}）` : '');
     const hide = document.createElement('button'); hide.className = 'cal-ev-hide'; hide.textContent = '非表示'; hide.title = 'この予定を今後非表示にする';
-    hide.addEventListener('click', () => { if (confirm(`「${o.summary}」を今後非表示にしますか？（設定→非表示で戻せます）`)) hideCalEvent(o.summary); });
+    hide.addEventListener('click', async () => { if (await uiConfirm(`「${o.summary}」を今後非表示にしますか？（設定→非表示で戻せます）`)) hideCalEvent(o.summary); });
     row.append(t, s, hide);
     el.calDayEvents.appendChild(row);
   });
@@ -2010,7 +2041,7 @@ async function exportCSVFile() {
   }
 }
 // CSVテキストを取り込み、現在のTo-Do/メモを置き換える
-function importCSVText(text) {
+async function importCSVText(text) {
   if (!text || !text.trim()) { dataStatus('CSVが空です'); return; }
   const rows = parseCSV(text);
   if (!rows.length) { dataStatus('読み込めるデータがありません'); return; }
@@ -2037,7 +2068,8 @@ function importCSVText(text) {
     }
   }
   if (!nt.length && !nm.length && !nc.length) { dataStatus('有効な行がありませんでした'); return; }
-  if (!confirm(`読み込むと現在の内容を置き換えます。\nTo-Do ${nt.length}件・メモ ${nm.length}件・カレンダー ${nc.length}件を読み込みますか？`)) {
+  const okImport = await uiConfirm(`読み込むと今の内容をすべて上書きします。\nTo-Do ${nt.length}件・メモ ${nm.length}件・カレンダー ${nc.length}件で置き換えますか？`);
+  if (!okImport) {
     dataStatus('読み込みを中止しました');
     return;
   }

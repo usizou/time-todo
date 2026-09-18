@@ -119,6 +119,13 @@ body {
 }
 .overlay-close:hover { color: var(--danger); }
 
+/* 確認ダイアログ */
+.confirm-card { max-width: 360px; }
+.confirm-msg { font-size: 14px; color: var(--text); white-space: pre-wrap; line-height: 1.5; margin-bottom: 16px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.confirm-ok-btn { padding: 10px 20px; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.confirm-ok-btn:hover { filter: brightness(1.1); }
+
 /* 設定内のボタン（テーマ切替など） */
 .settings-btn {
   padding: 10px 14px;
