@@ -56,7 +56,7 @@
   async function fetchText(url) {
     const http = cap && cap.Plugins ? (cap.Plugins.CapacitorHttp || cap.Plugins.Http) : null;
     if (http && http.get) {
-      const res = await http.get({ url, responseType: 'text' });
+      const res = await http.get({ url, responseType: 'text', headers: { 'Cache-Control': 'no-cache' } });
       return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     }
     const r = await fetch(url);

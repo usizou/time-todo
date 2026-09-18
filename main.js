@@ -55,7 +55,7 @@ ipcMain.handle('clipboard:write', (_e, text) => {
 // URLからテキスト取得（ICS購読用。file:// のレンダラーはCORSで外部取得できないためメイン経由）
 ipcMain.handle('net:fetchText', async (_e, url) => {
   try {
-    const res = await fetch(String(url));
+    const res = await fetch(String(url), { cache: 'no-store' });
     if (!res.ok) return { ok: false, status: res.status };
     return { ok: true, text: await res.text() };
   } catch (e) {
