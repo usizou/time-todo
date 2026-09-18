@@ -72,6 +72,8 @@ const el = {
   calName: document.getElementById('cal-name'),
   calUrl: document.getElementById('cal-url'),
   calAdd: document.getElementById('cal-add'),
+  calDiag: document.getElementById('cal-diag'),
+  calDiagOut: document.getElementById('cal-diag-out'),
   themeToggle: document.getElementById('theme-toggle'),
   gearBtn: document.getElementById('gear-btn'),
   settingsOverlay: document.getElementById('settings-overlay'),
@@ -1492,6 +1494,25 @@ function addCalendar() {
   el.calName.value = ''; el.calUrl.value = '';
   renderCalendarSettings(); saveCalendars(); refreshCalendars();
 }
+
+// 診断：取り込んだ全予定の生データ（タイトル・日時・RRULE・EXDATE・RECURRENCE-ID・STATUS）を出力
+async function diagnoseCalendars() {
+  el.calDiagOut.value = '取得中…';
+  await refreshCalendars();
+  const lines = [];
+  calRawEvents.forEach((ev) => {
+    const s = ev.start ? (ev.start.allDay ? '終日 ' + ymdOf(ev.start.dt) : ymdOf(ev.start.dt) + ' ' + fmtHM(ev.start.dt.getTime())) : '?';
+    const parts = [ev.calName || '(名無)', ev.summary || '(無題)', s];
+    if (ev.rrule) parts.push('RRULE:' + ev.rrule);
+    if (ev.recurrenceId) parts.push('変更回:' + ymdOf(ev.recurrenceId.dt));
+    if (ev.status) parts.push('STATUS:' + ev.status);
+    if (ev.exset && ev.exset.size) parts.push('除外' + ev.exset.size + '件:' + [...ev.exset].slice(0, 6).join(','));
+    lines.push(parts.join(' | '));
+  });
+  lines.sort();
+  el.calDiagOut.value = `取り込んだ予定 ${calRawEvents.length}件\n` + lines.join('\n');
+}
+el.calDiag.addEventListener('click', diagnoseCalendars);
 
 el.calBtn.addEventListener('click', openCalendar);
 el.calClose.addEventListener('click', closeCalendar);
