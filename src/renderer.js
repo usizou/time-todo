@@ -11,6 +11,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
 
 // ===== 要素の取得 =====
 const el = {
+  display: document.querySelector('.display'),
   time: document.getElementById('time'),
   phase: document.getElementById('phase-label'),
   pomoCount: document.getElementById('pomo-count'),
@@ -241,6 +242,10 @@ function render() {
   el.time.classList.toggle('warning', warn);
   el.ringTotal.classList.toggle('warning', warn);
 
+  // 未スタート（初期値のまま）／終了時はグレーアウト。一時停止中は通常色のまま
+  const idle = !s.running && (s.remainingMs >= s.durationMs || s.remainingMs <= 0);
+  el.display.classList.toggle('idle', idle);
+
   if (mode === 'pomodoro') {
     const labels = { work: '🍅 作業', short: '☕ 小休憩', long: '🌴 長休憩' };
     el.phase.textContent = labels[s.phase];
@@ -297,7 +302,9 @@ function start() {
   if (mode === 'target' && s.targetTimestamp) {
     // 目標時刻に正確に合わせる（セットからstartまでの経過も反映）
     s.remainingMs = s.targetTimestamp - Date.now();
-    if (s.remainingMs <= 0) { applyTarget(false); return; } // 過ぎていたら翌日に再設定
+    if (s.remainingMs <= 0) { applyTarget(false, true); } // 過ぎていたら翌日に繰り上げて開始
+    s.remainingMs = s.targetTimestamp - Date.now();
+    if (s.remainingMs <= 0) return; // 念のため（時刻未設定など）
     s.running = true;
     s.endTime = s.targetTimestamp;
   } else {
@@ -346,7 +353,7 @@ function reset() {
     s.completedPomos = 0;
     setPomodoroPhase('work');
   } else if (mode === 'target') {
-    applyTarget(false); // 目標時刻から残り時間を再計算（保存はしない）
+    applyTarget(false, false); // 目標時刻から残り時間を再計算（過ぎていても翌日に回さない）
   } else {
     applyPreset(DEFAULT_SEC); // 起動時の初期値(5分)に戻す
   }
@@ -428,19 +435,21 @@ function applyCustom() {
   render();
 }
 
-// ===== 時刻指定：目標時刻から残り時間を算出（save=trueで次回用に保存） =====
-function applyTarget(save = true) {
+// ===== 時刻指定：目標時刻から残り時間を算出 =====
+// save=true: 次回用に保存 / roll=true: 過ぎていたら翌日に繰り上げ
+// （roll=false は「表示だけ」の用途。過ぎた時刻を翌日に勝手に回さず、静的な終了表示にする）
+function applyTarget(save = true, roll = true) {
   const s = S.target;
   const v = el.inTarget.value; // "HH:MM"
   if (!v) { s.targetTimestamp = null; render(); return; }
   const [h, m] = v.split(':').map(Number);
   const target = new Date();
   target.setHours(h, m, 0, 0);
-  if (target.getTime() <= Date.now()) {
-    target.setDate(target.getDate() + 1); // 過ぎていれば翌日
+  if (target.getTime() <= Date.now() && roll) {
+    target.setDate(target.getDate() + 1); // 過ぎていれば翌日（開始時のみ）
   }
   s.targetTimestamp = target.getTime();
-  s.remainingMs = s.targetTimestamp - Date.now();
+  s.remainingMs = Math.max(0, s.targetTimestamp - Date.now()); // 過ぎている表示は0（翌日換算しない）
   s.durationMs = s.remainingMs; // 総リングの基準（設定時点〜目標時刻）
   if (save) saveTargetTime(v); // 次回の初期値として保存
   render();
@@ -606,7 +615,7 @@ async function loadTodos() {
   setChime(!!store.chimeEnabled, false); // チャイム設定を復元（保存はしない）
   if (store.lastTargetTime) {
     el.inTarget.value = store.lastTargetTime; // 前回の目標時刻を初期値に
-    if (!S.target.running) applyTarget(false); // 状態へ反映（保存はしない）
+    if (!S.target.running) applyTarget(false, false); // 状態へ反映（過ぎていても翌日に回さない）
   }
   // メモ（一言ログ）を復元。旧形式(store.memo=文字列)は1件に変換
   if (Array.isArray(store.memos)) {
@@ -1400,7 +1409,7 @@ el.themeToggle.addEventListener('click', () => {
 })();
 applyPreset(DEFAULT_SEC); // カウントダウンの初期値(5分)
 setPomodoroPhase('work');  // ポモドーロの初期状態
-applyTarget(false);        // 時刻まで の初期状態（保存はしない）
+applyTarget(false, false); // 時刻まで の初期状態（過ぎていても翌日に回さない）
 updateClock();             // 現在日時の初期表示
 render();
 loadTodos();

@@ -1,6 +1,6 @@
 {
   "name": "time-todo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "タイマー & To-Do デスクトップアプリ",
   "main": "main.js",
   "scripts": {

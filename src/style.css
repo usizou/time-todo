@@ -175,6 +175,10 @@ body {
   height: 100%;
   transform: rotate(-90deg); /* 12時方向スタート */
 }
+/* 未スタート／終了時：グレーアウトして「動いていない」ことを明示（一時停止中は除く） */
+.display.idle .ring { filter: grayscale(1); opacity: 0.45; }
+.display.idle .time,
+.display.idle .phase-label { color: var(--muted); }
 .ring-track {
   fill: none;
   stroke: var(--panel);
