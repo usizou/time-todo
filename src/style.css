@@ -179,6 +179,16 @@ body {
 .display.idle .ring { filter: grayscale(1); opacity: 0.45; }
 .display.idle .time,
 .display.idle .phase-label { color: var(--muted); }
+
+/* 一時停止中：⏸マークを表示（色はそのまま） */
+.pause-mark {
+  color: var(--accent);
+  font-size: 20px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.pause-mark[hidden] { display: none; }
+.display.paused .ring { opacity: 0.85; } /* ほんの少しだけ落として「停止中」を補強 */
 .ring-track {
   fill: none;
   stroke: var(--panel);

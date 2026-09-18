@@ -12,6 +12,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
 // ===== 要素の取得 =====
 const el = {
   display: document.querySelector('.display'),
+  pauseMark: document.getElementById('pause-mark'),
   time: document.getElementById('time'),
   phase: document.getElementById('phase-label'),
   pomoCount: document.getElementById('pomo-count'),
@@ -245,6 +246,10 @@ function render() {
   // 未スタート（初期値のまま）／終了時はグレーアウト。一時停止中は通常色のまま
   const idle = !s.running && (s.remainingMs >= s.durationMs || s.remainingMs <= 0);
   el.display.classList.toggle('idle', idle);
+  // 一時停止中（開始後に止めた＝残りが途中）は⏸マークを表示
+  const paused = !s.running && s.remainingMs > 0 && s.remainingMs < s.durationMs;
+  el.display.classList.toggle('paused', paused);
+  el.pauseMark.hidden = !paused;
 
   if (mode === 'pomodoro') {
     const labels = { work: '🍅 作業', short: '☕ 小休憩', long: '🌴 長休憩' };

@@ -161,7 +161,8 @@ stateDiagram-v2
 - 設定した目標時刻(HH:MM)は `store.lastTargetTime` に保存し、次回起動時の初期値に復元する
   （保存が無ければ現在+1時間）。
 - `applyTarget(save, roll)`：`roll=true`（セット/開始時）は過ぎていれば翌日へ繰り上げ。`roll=false`（起動・リセット・状態反映などの表示用途）は**翌日に回さず**残りを0にして静的表示（「終わったのに翌日カウントに見える」モヤモヤ防止）。
-- **グレーアウト**：未スタート（初期値のまま）・終了時は `.display.idle` を付けてリングと時刻を淡色化し「動いていない」ことを明示。一時停止中は対象外（通常色）。全モード共通（判定 `!running && (remainingMs>=durationMs || remainingMs<=0)`）。
+- **グレーアウト**：未スタート（初期値のまま）・終了時は `.display.idle` を付けてリングと時刻を淡色化し「動いていない」ことを明示。全モード共通（判定 `!running && (remainingMs>=durationMs || remainingMs<=0)`）。
+- **一時停止表示**：開始後に止めた状態（`!running && 0 < remainingMs < durationMs`）は `.display.paused` を付け、リング中央に⏸マーク（`#pause-mark`）を表示。色は通常のまま（グレーにはしない）。
 - このモードでは総合時間の円（総リング）と凡例の「総」を非表示にし、時/分/秒のみ表示する
   （`#tab-timer` に `no-total` クラスを付与）。
 - カウントダウン表示の下に現在日時を小さく表示（`updateClock` を1秒間隔で更新。このモードのみ）。
