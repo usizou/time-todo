@@ -20,10 +20,10 @@
   <section id="tab-timer" class="tab-panel active">
     <!-- モード切り替え -->
     <div class="mode-switch">
-      <button class="mode active" data-mode="countdown">カウントダウン</button>
+      <button class="mode active" data-mode="target">時刻まで</button>
+      <button class="mode" data-mode="countdown">カウントダウン</button>
       <!-- ポモドーロは非表示（使わないため）。復活させたい場合は下行のコメントを外す -->
       <!-- <button class="mode" data-mode="pomodoro">ポモドーロ</button> -->
-      <button class="mode" data-mode="target">時刻まで</button>
     </div>
 
     <!-- 残り時間の表示（4重の同心円リング） -->
@@ -62,7 +62,7 @@
     </div>
 
     <!-- カウントダウン用：時間のプリセット＆入力 -->
-    <div id="countdown-setup" class="setup">
+    <div id="countdown-setup" class="setup" style="display:none">
       <div class="presets">
         <button class="preset" data-sec="60">1分</button>
         <button class="preset" data-sec="300">5分</button>
@@ -81,7 +81,7 @@
     </div>
 
     <!-- 時刻指定用：目標時刻の入力 -->
-    <div id="target-setup" class="setup" style="display:none">
+    <div id="target-setup" class="setup">
       <div class="custom-input">
         目標時刻
         <input id="in-target" type="time" step="60" />

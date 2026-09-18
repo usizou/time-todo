@@ -175,7 +175,7 @@ function setRing(ring, ratio) {
 const POMO = { work: 25, shortBreak: 5, longBreak: 15, longEvery: 4 };
 
 // ===== 状態（モードごとに独立。切り替えても各タイマーは動き続ける） =====
-let mode = 'countdown';        // 現在表示しているモード 'countdown' | 'pomodoro' | 'target'
+let mode = 'target';           // 現在表示しているモード（既定は「時刻まで」） 'countdown' | 'pomodoro' | 'target'
 const S = {
   countdown: { durationMs: DEFAULT_SEC * 1000, remainingMs: DEFAULT_SEC * 1000, endTime: null, running: false },
   pomodoro:  { durationMs: POMO.work * 60000, remainingMs: POMO.work * 60000, endTime: null, running: false, phase: 'work', completedPomos: 0 },
