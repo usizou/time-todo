@@ -41,6 +41,7 @@ const el = {
   todoList: document.getElementById('todo-list'),
   todoEmpty: document.getElementById('todo-empty'),
   todoActions: document.getElementById('todo-actions'),
+  todoFilter: document.getElementById('todo-filter'),
   todoClearDone: document.getElementById('todo-clear-done'),
   memoInput: document.getElementById('memo-input'),
   memoAdd: document.getElementById('memo-add'),
@@ -86,7 +87,7 @@ function syncMobile() {
     if (t.done) return;
     const dt = taskDateTime(t);
     if (dt && dt > now) {
-      items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: t.text, at: dt });
+      items.push({ id: 10000 + i, title: '⏰ タスクの時刻です', body: stripTags(t.text) || t.text, at: dt });
     }
   });
   // 毎正時チャイム（「時刻まで」カウントダウン中のみ・次の24時間分を予約）
@@ -554,8 +555,9 @@ el.chimeOn.addEventListener('change', () => setChime(el.chimeOn.checked));
 // ============================================================
 //  To-Do
 // ============================================================
-let todos = []; // { id, text, done, date, time, firedOn }
+let todos = []; // { id, text, done, date, time, firedOn, tags:[] }
 let dragId = null; // ドラッグ中のタスクID
+let todoTagFilter = null; // 選択中の絞り込みタグ（null=すべて）
 
 // 空の日付/時刻入力に例示を出すため、値の有無で is-empty を切り替える
 function refreshPh(input) {
@@ -597,6 +599,8 @@ async function loadTodos() {
   }
   const store = STORE;
   todos = Array.isArray(store.todos) ? store.todos : [];
+  // 旧データにタグが無ければ本文から復元
+  todos.forEach((t) => { if (!Array.isArray(t.tags)) t.tags = parseTags(t.text || ''); });
   renderTodos();
   setChime(!!store.chimeEnabled, false); // チャイム設定を復元（保存はしない）
   if (store.lastTargetTime) {
@@ -631,15 +635,48 @@ async function saveTodos() {
   }
 }
 
+// タスクに含まれる全タグ（出現順・重複除去）
+function allTodoTags() {
+  const out = [];
+  todos.forEach((t) => (t.tags || []).forEach((tg) => { if (!out.includes(tg)) out.push(tg); }));
+  return out;
+}
+
+// 絞り込みバー（タグが1つ以上あるときだけ表示）
+function renderTodoFilter() {
+  const tags = allTodoTags();
+  el.todoFilter.innerHTML = '';
+  if (!tags.length) { el.todoFilter.style.display = 'none'; todoTagFilter = null; return; }
+  if (todoTagFilter && !tags.includes(todoTagFilter)) todoTagFilter = null; // 消えたタグを解除
+  el.todoFilter.style.display = 'flex';
+  const mkChip = (label, tag) => {
+    const b = document.createElement('button');
+    b.className = 'tag-chip' + (todoTagFilter === tag ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => { todoTagFilter = tag; renderTodos(); });
+    return b;
+  };
+  el.todoFilter.appendChild(mkChip('すべて', null));
+  tags.forEach((tg) => el.todoFilter.appendChild(mkChip('#' + tg, tg)));
+}
+
 function renderTodos() {
   el.todoList.innerHTML = '';
   el.todoEmpty.style.display = todos.length ? 'none' : 'block';
   // 完了タスクがあるときだけ「完了したタスクを削除」を表示
   el.todoActions.style.display = todos.some((t) => t.done) ? 'flex' : 'none';
   updateNextTodo(); // タイマー画面の「次の予定」も同期
+  renderTodoFilter();
 
   // 表示は「未完了→完了」の順（並び順自体は保持。JSのsortは安定なのでグループ内順序は不変）
-  const ordered = [...todos].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+  let ordered = [...todos].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+  if (todoTagFilter) ordered = ordered.filter((t) => (t.tags || []).includes(todoTagFilter));
+  if (todos.length) {
+    el.todoEmpty.style.display = ordered.length ? 'none' : 'block';
+    el.todoEmpty.textContent = todoTagFilter ? `#${todoTagFilter} のタスクはありません` : 'タスクはまだありません';
+  } else {
+    el.todoEmpty.textContent = 'タスクはまだありません';
+  }
   ordered.forEach((t) => {
     const li = document.createElement('li');
     li.className = 'todo-item' + (t.done ? ' done' : '');
@@ -662,9 +699,25 @@ function renderTodos() {
 
     const span = document.createElement('span');
     span.className = 'txt';
-    span.textContent = t.text; // ユーザー入力は textContent で安全に表示
+    span.textContent = stripTags(t.text) || t.text; // #タグは除いて表示（本文が空ならそのまま）
     span.title = 'クリックで編集';
     span.addEventListener('click', () => startEditText(li, span, t));
+
+    // タグのチップ（クリックで絞り込み）
+    let tagWrap = null;
+    const tags = t.tags || [];
+    if (tags.length) {
+      tagWrap = document.createElement('div');
+      tagWrap.className = 'm-tags';
+      tags.forEach((tg) => {
+        const chip = document.createElement('button');
+        chip.className = 'tag-chip mini' + (todoTagFilter === tg ? ' active' : '');
+        chip.textContent = '#' + tg;
+        chip.title = `#${tg} で絞り込み`;
+        chip.addEventListener('click', () => { todoTagFilter = tg; renderTodos(); });
+        tagWrap.appendChild(chip);
+      });
+    }
 
     const when = document.createElement('div');
     when.className = 'todo-when';
@@ -700,7 +753,8 @@ function renderTodos() {
     });
 
     when.append(date, time);
-    body.append(span, when);
+    if (tagWrap) body.append(span, tagWrap, when);
+    else body.append(span, when);
 
     const del = document.createElement('button');
     del.className = 'todo-del';
@@ -752,10 +806,10 @@ function startEditText(li, span, t) {
   input.type = 'text';
   input.className = 'edit-input';
   input.maxLength = 200;
-  input.value = t.text;
+  input.value = t.text; // #タグを含む生テキストを編集
   const commit = () => {
     const v = input.value.trim();
-    if (v) t.text = v; // 空なら変更しない
+    if (v) { t.text = v; t.tags = parseTags(v); } // 空なら変更しない
     renderTodos();
     saveTodos();
   };
@@ -801,8 +855,12 @@ function sortTodosByTime() {
 }
 
 function addTodo() {
-  const text = el.todoText.value.trim();
+  let text = el.todoText.value.trim();
   if (!text) return;
+  // タグで絞り込み中なら、そのタグを自動で付与（まだ付いていないときだけ）
+  if (todoTagFilter && !parseTags(text).includes(todoTagFilter)) {
+    text += ' #' + todoTagFilter;
+  }
   todos.push({
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     text,
@@ -810,6 +868,7 @@ function addTodo() {
     date: el.todoDate.value || '', // 空欄なら今日扱い
     time: el.todoTime.value || '', // 空欄ならアラームなし
     firedOn: '',
+    tags: parseTags(text),
   });
   el.todoText.value = '';
   el.todoDate.value = todayYMD(); // 追加後も日付は今日を既定に
@@ -831,7 +890,7 @@ function checkAlarms() {
     // 予定時刻を過ぎた直後(1分以内)に一度だけ発火。firedOnで再発火防止
     if (dt && now >= dt && now < dt + 60000 && t.firedOn !== dt) {
       beep();
-      notify('⏰ タスクの時刻です', t.text);
+      notify('⏰ タスクの時刻です', stripTags(t.text) || t.text);
       t.firedOn = dt;
       changed = true;
     }
@@ -905,7 +964,7 @@ function updateNextTodo() {
   time.textContent = '⏰ ' + t.time;
   const txt = document.createElement('span');
   txt.className = 'nt-text';
-  txt.textContent = t.text; // ユーザー入力は textContent で安全に
+  txt.textContent = stripTags(t.text) || t.text; // #タグは除いて表示
   el.nextTodo.append(label, time, txt);
 
   // 予定超過した未完了タスクがあれば右端に表示
@@ -1240,7 +1299,7 @@ function importCSVText(text) {
     if (type === 'memo') {
       nm.push({ id: uid(), text: txt, at: parseInt(cols[idx.at]) || Date.now(), tags: parseTags(txt) });
     } else {
-      nt.push({ id: uid(), text: txt, done: (cols[idx.done] || '').trim().toLowerCase() === 'true', date: cols[idx.date] || '', time: cols[idx.time] || '', firedOn: '' });
+      nt.push({ id: uid(), text: txt, done: (cols[idx.done] || '').trim().toLowerCase() === 'true', date: cols[idx.date] || '', time: cols[idx.time] || '', firedOn: '', tags: parseTags(txt) });
     }
   }
   if (!nt.length && !nm.length) { dataStatus('有効な行がありませんでした'); return; }
