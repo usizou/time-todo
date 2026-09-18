@@ -1076,8 +1076,12 @@ function renderMemos() {
 }
 
 function addMemo() {
-  const text = el.memoInput.value.trim();
+  let text = el.memoInput.value.trim();
   if (!text) return;
+  // タグで絞り込み中なら、そのタグを自動で付与（まだ付いていないときだけ）
+  if (memoTagFilter && !parseTags(text).includes(memoTagFilter)) {
+    text += ' #' + memoTagFilter;
+  }
   memos.unshift({ // 新しいものを上に
     id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     text,

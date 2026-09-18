@@ -205,6 +205,7 @@ flowchart LR
 新しいものが上、日時付き、削除可。旧形式の `store.memo` 文字列は起動時に1件へ移行）。
 本文中の `#タグ` は `parseTags()` で抽出して `tags` 配列に保持し、表示時は `stripTags()` で本文から除いてチップ表示。
 上部のタグバー（`#memo-filter`）とメモ内チップから `memoTagFilter` を切り替えて絞り込む。
+`memoTagFilter` が有効な間に追加したメモには、そのタグを本文へ自動付与する（既に付いていなければ `#<tag>` を末尾に追記）。
 本文はクリックで `startEditMemo()` によりインライン編集（生テキストを編集し、確定時に `parseTags()` でタグを再取得）。
 入力欄・編集欄は `<textarea>`（Shift+Enterで追加/確定・Enterで改行、`autoGrow()` で高さ自動調整、最大160px）。
 表示は `.m-text{white-space:pre-wrap}` で改行を保持。CSV は `csvEscape`/`parseCSV` が引用符付き改行を往復できる。
