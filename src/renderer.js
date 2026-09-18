@@ -28,8 +28,7 @@ const el = {
   inMin: document.getElementById('in-min'),
   inSec: document.getElementById('in-sec'),
   inTarget: document.getElementById('in-target'),
-  setBtn: document.getElementById('set-btn'),
-  targetBtn: document.getElementById('target-btn'),
+  presets: Array.from(document.querySelectorAll('.preset')),
   start: document.getElementById('start-btn'),
   pause: document.getElementById('pause-btn'),
   reset: document.getElementById('reset-btn'),
@@ -280,6 +279,12 @@ function render() {
   el.start.disabled = s.running || s.remainingMs <= 0;
   el.pause.disabled = !s.running;
 
+  // 稼働中は時間の変更を不可にする（各モードは独立稼働なので各自の状態で判定）
+  const cdRun = S.countdown.running;
+  el.inHour.disabled = el.inMin.disabled = el.inSec.disabled = cdRun;
+  el.presets.forEach((b) => { b.disabled = cdRun; });
+  el.inTarget.disabled = S.target.running;
+
   updateModeIndicators();
   updateNextTodo();
 }
@@ -484,12 +489,11 @@ function applyPreset(sec) {
 el.start.addEventListener('click', start);
 el.pause.addEventListener('click', pause);
 el.reset.addEventListener('click', reset);
-el.setBtn.addEventListener('click', () => { if (!S.countdown.running) applyCustom(); });
-// 時/分/秒を変えたら「セット」を押さなくても自動反映
+// 時/分/秒を変えたら自動反映（稼働中は入力自体を無効化しているので発火しない）
 [el.inHour, el.inMin, el.inSec].forEach((input) => {
   input.addEventListener('change', () => { if (!S.countdown.running) applyCustom(); });
 });
-el.targetBtn.addEventListener('click', () => { if (!S.target.running) applyTarget(true); });
+// 目標時刻を変えたら自動反映
 el.inTarget.addEventListener('change', () => { if (!S.target.running) applyTarget(true); });
 
 document.querySelectorAll('.preset').forEach((btn) => {

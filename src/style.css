@@ -299,6 +299,12 @@ body {
   transition: all 0.15s;
 }
 .preset:hover { border-color: var(--accent); }
+/* 稼働中は時間変更を不可に（見た目でも無効を示す） */
+.preset:disabled,
+.custom-input input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .custom-input {
   display: flex;
   align-items: center;
