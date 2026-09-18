@@ -1112,8 +1112,8 @@ function startEditMemo(li, span, m) {
     saveMemos();
   };
   input.addEventListener('keydown', (e) => {
-    // Enter で確定、Shift+Enter で改行、Esc で取り消し
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); input.blur(); }
+    // Shift+Enter で確定、Enter は改行、Esc で取り消し
+    if (e.key === 'Enter' && e.shiftKey && !e.isComposing) { e.preventDefault(); input.blur(); }
     else if (e.key === 'Escape') { input.value = m.text; input.blur(); }
   });
   input.addEventListener('input', () => autoGrow(input));
@@ -1126,8 +1126,8 @@ function startEditMemo(li, span, m) {
 
 el.memoAdd.addEventListener('click', addMemo);
 el.memoInput.addEventListener('keydown', (e) => {
-  // Enter で追加、Shift+Enter で改行（IME変換確定中のEnterは無視）
-  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+  // Shift+Enter で追加、Enter は改行（IME変換確定中は無視）
+  if (e.key === 'Enter' && e.shiftKey && !e.isComposing) {
     e.preventDefault();
     addMemo();
     autoGrow(el.memoInput);
