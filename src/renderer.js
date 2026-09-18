@@ -59,6 +59,7 @@ const el = {
   remList: document.getElementById('rem-list'),
   remEmpty: document.getElementById('rem-empty'),
   todayEvents: document.getElementById('today-events'),
+  nextReminder: document.getElementById('next-reminder'),
   calBtn: document.getElementById('cal-btn'),
   calOverlay: document.getElementById('cal-overlay'),
   calClose: document.getElementById('cal-close'),
@@ -1176,6 +1177,43 @@ function updateReminderInputs() {
   refreshPh(el.remDate);
 }
 
+// 全リマインダーのうち次に発生する1件
+function nextReminderOverall() {
+  let best = null, bestT = Infinity;
+  reminders.forEach((r) => {
+    if (!r.enabled) return;
+    const t = nextReminderTime(r);
+    if (t != null && t < bestT) { bestT = t; best = { r, t }; }
+  });
+  return best;
+}
+
+// 時刻までタブ：カレンダーとタスクの間に「次のリマインダー」を1件表示
+function renderNextReminder() {
+  const box = el.nextReminder;
+  if (mode !== 'target') { box.style.display = 'none'; return; }
+  const nx = nextReminderOverall();
+  if (!nx) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  box.classList.add('clickable');
+  box.innerHTML = '';
+  const label = document.createElement('span');
+  label.className = 'nt-label';
+  label.textContent = '次のリマインダー';
+  const d = new Date(nx.t);
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  const isToday = ymdOf(d) === ymdOf(new Date());
+  const when = isToday ? fmtHM(nx.t) : `${d.getMonth() + 1}/${d.getDate()}(${wd}) ${fmtHM(nx.t)}`;
+  const time = document.createElement('span');
+  time.className = 'nt-time';
+  time.textContent = '🔔 ' + when;
+  const txt = document.createElement('span');
+  txt.className = 'nt-text';
+  txt.textContent = nx.r.title || '(名称なし)';
+  box.append(label, time, txt);
+}
+el.nextReminder.addEventListener('click', () => document.querySelector('.tab[data-tab="reminder"]').click());
+
 buildWeekdayChips();
 el.remRepeat.addEventListener('change', updateReminderInputs);
 el.remAdd.addEventListener('click', addReminder);
@@ -1599,6 +1637,7 @@ function nextAlarmTodo() {
 // 「時刻まで」モードのときだけ、次の予定タスクを下部に表示
 function updateNextTodo() {
   if (typeof renderTodayEvents === 'function') renderTodayEvents(); // その日の予定も同期
+  if (typeof renderNextReminder === 'function') renderNextReminder(); // 次のリマインダーも同期
   if (mode !== 'target') { el.nextTodo.style.display = 'none'; el.overdueTodo.style.display = 'none'; return; }
   el.nextTodo.style.display = 'flex';
   const t = nextAlarmTodo();
