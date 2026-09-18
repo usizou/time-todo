@@ -1182,6 +1182,7 @@ el.remAdd.addEventListener('click', addReminder);
 el.remTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') addReminder(); });
 el.remDate.addEventListener('input', () => refreshPh(el.remDate));
 el.remTime.addEventListener('input', () => refreshPh(el.remTime));
+refreshPh(el.remTime); // 時刻欄に HH:MM プレースホルダを表示
 updateReminderInputs();
 
 // ============================================================
