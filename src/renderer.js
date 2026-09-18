@@ -50,6 +50,14 @@ const el = {
   memoList: document.getElementById('memo-list'),
   memoEmpty: document.getElementById('memo-empty'),
   memoFilter: document.getElementById('memo-filter'),
+  remTitle: document.getElementById('rem-title'),
+  remTime: document.getElementById('rem-time'),
+  remRepeat: document.getElementById('rem-repeat'),
+  remDate: document.getElementById('rem-date'),
+  remWeekdays: document.getElementById('rem-weekdays'),
+  remAdd: document.getElementById('rem-add'),
+  remList: document.getElementById('rem-list'),
+  remEmpty: document.getElementById('rem-empty'),
   themeToggle: document.getElementById('theme-toggle'),
   gearBtn: document.getElementById('gear-btn'),
   settingsOverlay: document.getElementById('settings-overlay'),
@@ -103,6 +111,20 @@ function syncMobile() {
       items.push({ id: 20000 + k, title: '⏰ 正時のお知らせ', body: `${String(h).padStart(2, '0')}:00 になりました`, at });
     }
   }
+  // リマインダー（繰り返し。次の複数回分を具体的な日時で予約＝祝日除外もJSで反映）
+  let rid = 40000;
+  reminders.forEach((r) => {
+    if (!r.enabled) return;
+    let from = now;
+    const times = r.repeat === 'once' ? 1 : 14; // 直近14回分（アプリ復帰時に入れ直す）
+    for (let n = 0; n < times; n++) {
+      const at = nextReminderTime(r, from);
+      if (at == null) break;
+      items.push({ id: rid++, title: '⏰ ' + (r.title || 'リマインダー'), body: `${repeatLabel(r)} ${r.time}`, at });
+      from = at;
+    }
+  });
+
   // 稼働中タイマーの終了
   if (S.countdown.running && S.countdown.endTime) items.push({ id: 30000, title: 'タイマー終了', body: '設定した時間が経過しました', at: S.countdown.endTime });
   if (S.target.running && S.target.endTime) items.push({ id: 30001, title: '指定時刻になりました', body: '設定した時刻です', at: S.target.endTime });
@@ -639,6 +661,10 @@ async function loadTodos() {
   memos.forEach((m) => { if (!Array.isArray(m.tags)) m.tags = parseTags(m.text || ''); });
   renderMemos();
 
+  // リマインダーを復元
+  reminders = Array.isArray(store.reminders) ? store.reminders : [];
+  renderReminders();
+
   applyTheme(store.theme || 'light'); // テーマを復元（既定はライト）
   syncMobile(); // スマホ：復元後に通知を予約
 }
@@ -918,7 +944,210 @@ function checkAlarms() {
   updateNextTodo(); // 時間経過で「次の予定」を更新
 }
 
-setInterval(checkAlarms, 15000); // 15秒ごとに確認（その分内に発火）
+setInterval(() => { checkAlarms(); checkReminders(Date.now()); }, 15000); // 15秒ごとに確認
+
+// ============================================================
+//  リマインダー（繰り返し通知。祝日を考慮した「平日」対応）
+// ============================================================
+let reminders = []; // { id, title, time:"HH:MM", repeat, weekdays:[], date, enabled, firedKey }
+const HOLIDAYS = new Set(window.HOLIDAYS || []); // 内閣府データ（holidays.js）
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+
+function ymdOf(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function isHoliday(d) { return HOLIDAYS.has(ymdOf(d)); }
+// 平日＝月〜金 かつ 祝日でない
+function isBusinessDay(d) { const w = d.getDay(); return w >= 1 && w <= 5 && !isHoliday(d); }
+
+// その日付 d がリマインダー r の対象日か（once は別扱い）
+function reminderMatchesDay(r, d) {
+  const w = d.getDay(); // 0=日 .. 6=土
+  switch (r.repeat) {
+    case 'daily': return true;
+    case 'weekdays': return isBusinessDay(d);
+    case 'weekend': return w === 0 || w === 6;
+    case 'weekly': return (r.weekdays || []).includes(w);
+    default: return false;
+  }
+}
+
+// from より後の次回発生時刻（ms）。無ければ null
+function nextReminderTime(r, from) {
+  from = from == null ? Date.now() : from;
+  const [h, m] = (r.time || '0:0').split(':').map(Number);
+  if (r.repeat === 'once') {
+    const base = r.date ? new Date(r.date + 'T00:00:00') : new Date();
+    base.setHours(h, m, 0, 0);
+    if (!r.date && base.getTime() <= from) base.setDate(base.getDate() + 1); // 日付未指定で過ぎてたら翌日
+    return base.getTime() > from ? base.getTime() : null;
+  }
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i); d.setHours(h, m, 0, 0);
+    if (d.getTime() <= from) continue;
+    if (reminderMatchesDay(r, d)) return d.getTime();
+  }
+  return null;
+}
+
+function repeatLabel(r) {
+  switch (r.repeat) {
+    case 'once': return r.date ? r.date.replace(/-/g, '/') : '一回だけ';
+    case 'daily': return '毎日';
+    case 'weekdays': return '平日';
+    case 'weekend': return '週末';
+    case 'weekly': return '毎週 ' + (r.weekdays || []).slice().sort((a, b) => a - b).map((w) => WD[w]).join('・');
+    default: return '';
+  }
+}
+function nextReminderLabel(r) {
+  const t = nextReminderTime(r);
+  if (t == null) return '—';
+  const d = new Date(t);
+  return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+async function saveReminders() {
+  try { STORE.reminders = reminders; await setStore(STORE); } catch (e) { console.warn('リマインダーの保存に失敗:', e); }
+}
+
+// 15秒ごと：今この瞬間に発火すべきリマインダーを通知
+function checkReminders(now) {
+  let changed = false;
+  reminders.forEach((r) => {
+    if (!r.enabled) return;
+    const [h, m] = (r.time || '0:0').split(':').map(Number);
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    const trig = d.getTime();
+    let applies;
+    if (r.repeat === 'once') {
+      applies = (r.date || ymdOf(new Date())) === ymdOf(new Date());
+    } else {
+      applies = reminderMatchesDay(r, d);
+    }
+    if (applies && now >= trig && now < trig + 60000 && r.firedKey !== String(trig)) {
+      beep();
+      notify('⏰ ' + (r.title || 'リマインダー'), `${repeatLabel(r)} ${r.time}`);
+      r.firedKey = String(trig);
+      if (r.repeat === 'once') r.enabled = false; // 単発は発火後オフ
+      changed = true;
+    }
+  });
+  if (changed) { saveReminders(); renderReminders(); syncMobile(); }
+}
+
+function renderReminders() {
+  el.remList.innerHTML = '';
+  el.remEmpty.style.display = reminders.length ? 'none' : 'block';
+  reminders.forEach((r) => {
+    const li = document.createElement('li');
+    li.className = 'rem-item' + (r.enabled ? '' : ' off');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = r.enabled;
+    cb.title = r.enabled ? 'オン（タップでオフ）' : 'オフ（タップでオン）';
+    cb.addEventListener('change', () => toggleReminder(r.id));
+
+    const body = document.createElement('div');
+    body.className = 'rem-body';
+    const top = document.createElement('div');
+    top.className = 'rem-top';
+    const time = document.createElement('span');
+    time.className = 'rem-time-lbl';
+    time.textContent = r.time;
+    const title = document.createElement('span');
+    title.className = 'rem-title-lbl';
+    title.textContent = r.title || '(名称なし)';
+    top.append(time, title);
+    const sub = document.createElement('div');
+    sub.className = 'rem-sub';
+    sub.textContent = `${repeatLabel(r)}${r.enabled ? ' ・ 次回 ' + nextReminderLabel(r) : ''}`;
+    body.append(top, sub);
+
+    const del = document.createElement('button');
+    del.className = 'rem-del';
+    del.textContent = '✕';
+    del.title = '削除';
+    del.addEventListener('click', () => deleteReminder(r.id));
+
+    li.append(cb, body, del);
+    el.remList.appendChild(li);
+  });
+}
+
+function addReminder() {
+  const title = el.remTitle.value.trim();
+  const time = el.remTime.value;
+  if (!time) { el.remTime.focus(); return; } // 時刻は必須
+  const repeat = el.remRepeat.value;
+  const weekdays = repeat === 'weekly' ? selectedWeekdays() : [];
+  if (repeat === 'weekly' && !weekdays.length) { return; } // 曜日未選択なら追加しない
+  reminders.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    title,
+    time,
+    repeat,
+    weekdays,
+    date: repeat === 'once' ? (el.remDate.value || '') : '',
+    enabled: true,
+    firedKey: '',
+  });
+  el.remTitle.value = '';
+  renderReminders();
+  saveReminders();
+  syncMobile();
+}
+
+function toggleReminder(id) {
+  const r = reminders.find((x) => x.id === id);
+  if (!r) return;
+  r.enabled = !r.enabled;
+  if (r.enabled) r.firedKey = ''; // 再オンで再アーム
+  renderReminders();
+  saveReminders();
+  syncMobile();
+}
+
+function deleteReminder(id) {
+  reminders = reminders.filter((x) => x.id !== id);
+  renderReminders();
+  saveReminders();
+  syncMobile();
+}
+
+// 曜日選択チップ（毎週用）
+function buildWeekdayChips() {
+  el.remWeekdays.innerHTML = '';
+  WD.forEach((label, w) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'wd-chip';
+    b.dataset.w = w;
+    b.textContent = label;
+    b.addEventListener('click', () => { b.classList.toggle('on'); });
+    el.remWeekdays.appendChild(b);
+  });
+}
+function selectedWeekdays() {
+  return Array.from(el.remWeekdays.querySelectorAll('.wd-chip.on')).map((b) => Number(b.dataset.w));
+}
+
+// 繰り返し種別で補助入力（曜日チップ / 日付）の表示を切替
+function updateReminderInputs() {
+  const v = el.remRepeat.value;
+  el.remWeekdays.hidden = v !== 'weekly';
+  el.remDate.hidden = v !== 'once';
+  refreshPh(el.remDate);
+}
+
+buildWeekdayChips();
+el.remRepeat.addEventListener('change', updateReminderInputs);
+el.remAdd.addEventListener('click', addReminder);
+el.remTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') addReminder(); });
+el.remDate.addEventListener('input', () => refreshPh(el.remDate));
+el.remTime.addEventListener('input', () => refreshPh(el.remTime));
+updateReminderInputs();
 
 // 「次の予定」表示を押したら To-Do タブへ移動（予定が無くても飛ぶ）。該当タスクは一瞬強調
 function jumpToTodo(id) {

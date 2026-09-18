@@ -204,7 +204,7 @@ flowchart LR
 
 ### 6.1 画面構成
 
-上部タブで「タイマー / To-Do / メモ」を切替。
+上部タブで「タイマー / To-Do / メモ / 通知（リマインダー）」を切替。
 タイマー画面はさらに「時刻まで / カウントダウン」をモード切替（既定は「時刻まで」= `let mode='target'`。ポモドーロは `index.html` でボタンを非表示化。ロジックは残置しておりコメントを外せば復活可能）。
 メモは一言を入力するとリストに残るログ形式（`store.memos` に `{id, text, at, tags}` の配列で保存、
 新しいものが上、日時付き、削除可。旧形式の `store.memo` 文字列は起動時に1件へ移行）。
@@ -309,6 +309,16 @@ npm run dist # exe 生成
   - タイマーの毎正時チャイム同様、アプリ起動中のみ有効（第13.3章に将来のバックグラウンド対応方針）
 - `store.todos` への永続化（起動時に復元）
 - ユーザー入力は `textContent` で描画し、HTML インジェクションを防止
+
+## 10.5 リマインダー（繰り返し通知）
+
+- `store.reminders` に配列で保存：`{ id, title, time:"HH:MM", repeat, weekdays:[0-6], date, enabled, firedKey }`。
+- `repeat`：`once`（一回。`date` 未指定なら直近）/ `daily` / `weekdays`（平日）/ `weekend`（土日）/ `weekly`（`weekdays` で曜日複数指定）。
+- **祝日対応**：内閣府 `syukujitsu.csv` から生成した `src/holidays.js`（`window.HOLIDAYS` = `["YYYY-MM-DD", …]`）を同梱。`isBusinessDay()` = 月〜金 かつ 非祝日。`weekdays`（平日）のみ祝日を除外（`weekly` は曜日そのままで除外しない）。
+  - `holidays.js` は 2024〜（現状 2027 まで）を収録。年次で更新が必要（将来はネットワーク更新を検討＝ロードマップ）。file:// でも確実に読めるよう JSON ではなくグローバル代入の JS で同梱。
+- `nextReminderTime(r, from)`：次回発生時刻を最大400日先まで探索。`checkReminders(now)`（15秒間隔、`checkAlarms` と同時）で当日該当かつ `now∈[trig, trig+60s)` かつ `firedKey!==trig` のとき発火。`once` は発火後 `enabled=false`。
+- **モバイル**：`syncMobile()` で各リマインダーの次回14回分（`once`は1回）を具体的な日時で Local Notifications に予約（＝祝日除外もJS側で反映）。アプリ復帰時に入れ直す。id は 40000 番台。
+- デスクトップはアプリ起動中のみ発火（タイマーのチャイム等と同じ制約）。
 
 ### 10.1 データモデル
 

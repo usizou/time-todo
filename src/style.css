@@ -189,6 +189,32 @@ body {
 }
 .pause-mark[hidden] { display: none; }
 .display.paused .ring { opacity: 0.85; } /* ほんの少しだけ落として「停止中」を補強 */
+
+/* ===== リマインダー ===== */
+.rem-input { display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0; }
+#rem-title { flex: 1; min-width: 0; padding: 10px 12px; background: var(--panel); border: 1px solid var(--muted); color: var(--text); border-radius: 8px; font-size: 14px; }
+.rem-time { flex-shrink: 0; padding: 9px 8px; background: var(--panel); border: 1px solid var(--muted); color: var(--text); border-radius: 8px; font-size: 14px; }
+.rem-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.rem-repeat-label { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+#rem-repeat, .rem-date { padding: 8px; background: var(--panel); border: 1px solid var(--muted); color: var(--text); border-radius: 8px; font-size: 14px; }
+.rem-weekdays { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.wd-chip { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--muted); background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px; }
+.wd-chip.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+.rem-add-row { margin-bottom: 14px; }
+#rem-add { padding: 10px 20px; background: var(--accent-2); color: var(--bg); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+#rem-add:hover { filter: brightness(1.1); }
+.rem-list { list-style: none; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.rem-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 8px; }
+.rem-item.off { opacity: 0.5; }
+.rem-item input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
+.rem-body { flex: 1; min-width: 0; }
+.rem-top { display: flex; gap: 8px; align-items: baseline; }
+.rem-time-lbl { font-size: 16px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.rem-title-lbl { font-size: 14px; word-break: break-word; }
+.rem-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.rem-del { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.rem-del:hover { color: var(--danger); }
+.rem-empty { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
 .ring-track {
   fill: none;
   stroke: var(--panel);

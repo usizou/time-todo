@@ -12,6 +12,7 @@
     <button class="tab active" data-tab="timer">⏱ タイマー</button>
     <button class="tab" data-tab="todo">✓ To-Do</button>
     <button class="tab" data-tab="memo">📝 メモ</button>
+    <button class="tab" data-tab="reminder">⏰ 通知</button>
     <button id="gear-btn" class="icon-btn" title="設定・データ">⚙</button>
     <button id="theme-toggle" class="icon-btn" title="テーマ切替">☀️</button>
   </nav>
@@ -138,6 +139,32 @@
     <div id="memo-empty" class="memo-empty">メモはまだありません</div>
   </section>
 
+  <!-- リマインダー画面（繰り返し通知） -->
+  <section id="tab-reminder" class="tab-panel">
+    <div class="rem-input">
+      <input id="rem-title" type="text" placeholder="リマインダー名…（例: 薬を飲む）" maxlength="100" />
+      <input id="rem-time" type="time" step="60" class="rem-time td-ph" data-ph="HH:MM" title="通知する時刻" />
+    </div>
+    <div class="rem-row">
+      <label class="rem-repeat-label">繰り返し
+        <select id="rem-repeat">
+          <option value="once">一回だけ</option>
+          <option value="daily">毎日</option>
+          <option value="weekdays" selected>平日（月〜金・祝日除く）</option>
+          <option value="weekend">週末（土日）</option>
+          <option value="weekly">毎週（曜日を選ぶ）</option>
+        </select>
+      </label>
+      <input id="rem-date" type="date" class="rem-date td-ph" data-ph="yyyy/mm/dd" title="日付（一回だけ・空欄で直近）" hidden />
+    </div>
+    <div id="rem-weekdays" class="rem-weekdays" hidden></div>
+    <div class="rem-add-row">
+      <button id="rem-add">追加</button>
+    </div>
+    <ul id="rem-list" class="rem-list"></ul>
+    <div id="rem-empty" class="rem-empty">リマインダーはまだありません</div>
+  </section>
+
   <!-- 設定・データ（歯車メニュー。CSVで書き出し/読み込み） -->
   <div id="settings-overlay" class="overlay" hidden>
     <div class="overlay-card">
@@ -168,6 +195,7 @@
     </div>
   </div>
 
+  <script src="holidays.js"></script>
   <script src="mobile.js"></script>
   <script src="renderer.js"></script>
 </body>
