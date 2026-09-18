@@ -1177,12 +1177,21 @@ function dataStatus(msg) {
   if (el.dataStatus) el.dataStatus.textContent = msg;
 }
 
+// CSVファイル名（例: time-todo_20260918-1345.csv）
+function csvFileName() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  return `time-todo_${stamp}.csv`;
+}
+
 async function exportCSVFile() {
   const csv = buildCSV();
+  const fname = csvFileName();
   // Android（Capacitor）は共有シートで書き出す（ブラウザのダウンロードが効かないため）
   if (window.Mobile && window.Mobile.isNative && window.Mobile.isNative() && window.Mobile.exportCSV) {
     try {
-      await window.Mobile.exportCSV(csv, 'time-todo.csv');
+      await window.Mobile.exportCSV(csv, fname);
       dataStatus('共有メニューから保存/送信できます（Drive・ファイルなど）');
     } catch (e) {
       // 共有を閉じただけの場合も例外になることがある
@@ -1197,7 +1206,7 @@ async function exportCSVFile() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'time-todo.csv';
+    a.download = fname;
     document.body.appendChild(a);
     a.click();
     a.remove();
