@@ -189,8 +189,14 @@
       <input id="cal-name" type="text" class="cal-cfg-input" placeholder="表示名（任意・例: 仕事）" maxlength="40" />
       <textarea id="cal-url" class="cal-cfg-input" placeholder="ICSのURL（https://calendar.google.com/.../basic.ics）"></textarea>
       <button id="cal-add">カレンダーを追加</button>
-      <button id="cal-diag" class="settings-btn">カレンダー診断（下の欄に内容を出力）</button>
-      <textarea id="cal-diag-out" class="cal-cfg-input" readonly placeholder="診断ボタンを押すと、取り込んだ予定の生データがここに出ます" style="min-height:120px"></textarea>
+      <div class="data-title" style="margin-top:12px">非表示にする予定</div>
+      <p class="data-desc">カレンダーやその日の予定でタップして非表示にした予定（ゴースト予定対策）。✕で元に戻せます。</p>
+      <ul id="cal-hide-list" class="cal-cfg-list"></ul>
+      <details class="cal-diag-details">
+        <summary>カレンダー診断（不具合調査用）</summary>
+        <button id="cal-diag" class="settings-btn">取り込んだ予定を下に出力</button>
+        <textarea id="cal-diag-out" class="cal-cfg-input" readonly placeholder="診断ボタンを押すと、取り込んだ予定の生データがここに出ます" style="min-height:120px"></textarea>
+      </details>
     </div>
 
     <p class="data-desc">To-Do・メモ・リマインダー・カレンダー設定を CSV で書き出し／読み込みできます。別の端末で読み込むと復元できます。</p>

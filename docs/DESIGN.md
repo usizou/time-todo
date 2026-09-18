@@ -319,7 +319,9 @@ npm run dist # exe 生成
 - **1回だけの変更/削除**：`RECURRENCE-ID` を持つVEVENTは該当回の上書き。`occurrencesInRange` は `uid|日付` で上書き対象を集め、マスターのその日分をスキップして上書き側（自身のDTSTART/タイトル）を出す。`STATUS:CANCELLED` は出さない（削除回）。これで「タイトル変更で新旧両方出る」「削除した回が残る」を解消。
 - **表示**：時刻までタブ上部 `#today-events` にその日の予定を最大2行（1行目=終日、2行目=時間指定。超過分は「他◯」）。📅ボタン（`#cal-overlay`）で月間カレンダー（予定日にドット、日曜/祝日は赤・土曜は青）＋選択日の予定一覧。
 - **更新**：起動時・📅を開いた時・購読変更時、および30分ごとに `refreshCalendars()`。
-- **CSV**：`type=cal, text=URL, done=有効, date=表示名` の行で書き出し/読み込み（既存6列スキーマ内）。
+- **非表示（ゴースト予定対策）**：`store.calHideTitles`（タイトル配列）。カレンダー/当日予定の「非表示」ボタンでタイトルを追加し、`occurrencesInRange` で除外。⚙で解除。Googleの秘密ICSがUI削除後も配信し続ける予定への回避策。
+- **診断**：⚙内の「カレンダー診断」で取り込んだ全VEVENTの生データ（タイトル/日時/RRULE/RECURRENCE-ID/STATUS/EXDATE）を出力。
+- **CSV**：`type=cal, text=URL, done=有効, date=表示名` と `type=calhide, text=タイトル` の行で書き出し/読み込み（既存6列スキーマ内）。
 
 ## 10.5 リマインダー（繰り返し通知）
 

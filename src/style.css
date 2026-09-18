@@ -169,8 +169,13 @@ textarea.cal-cfg-input { min-height: 48px; resize: vertical; font-family: inheri
 .cal-day-events { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .cal-ev { display: flex; gap: 8px; font-size: 13px; }
 .cal-ev-time { flex-shrink: 0; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 44px; }
-.cal-ev-sum { color: var(--text); word-break: break-word; }
+.cal-ev-sum { flex: 1; min-width: 0; color: var(--text); word-break: break-word; }
+.cal-ev-hide { flex-shrink: 0; background: transparent; border: 1px solid var(--muted); color: var(--muted); font-size: 11px; padding: 1px 6px; border-radius: 6px; cursor: pointer; }
+.cal-ev-hide:hover { border-color: var(--danger); color: var(--danger); }
 .cal-noev { color: var(--muted); font-size: 13px; }
+.cal-hide-empty { color: var(--muted); font-size: 12px; }
+.cal-diag-details { margin-top: 10px; }
+.cal-diag-details summary { font-size: 12px; color: var(--muted); cursor: pointer; }
 
 .tab-panel {
   display: none;
