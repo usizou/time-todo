@@ -426,19 +426,25 @@ function beep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
-    [0, 0.25, 0.5].forEach((offset) => {
+    // 2音を交互に鳴らす、少し激しめのアラーム音（矩形波）
+    const pattern = [988, 1319, 988, 1319, 988, 1319, 988]; // B5/E6 を交互
+    const dur = 0.14, gap = 0.03;
+    pattern.forEach((freq, i) => {
+      const start = now + i * (dur + gap);
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.4, start + 0.008); // 鋭い立ち上がり
+      gain.gain.setValueAtTime(0.4, start + dur - 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
       osc.connect(gain).connect(ctx.destination);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.2);
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
     });
-    setTimeout(() => ctx.close(), 1500);
+    const total = pattern.length * (dur + gap) + 0.3;
+    setTimeout(() => ctx.close(), total * 1000);
   } catch (e) {
     console.warn('音を鳴らせませんでした:', e);
   }
