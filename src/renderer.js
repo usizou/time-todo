@@ -1100,10 +1100,10 @@ function deleteMemo(id) {
 function startEditMemo(li, span, m) {
   if (span.dataset.editing) return;
   span.dataset.editing = '1';
-  const input = document.createElement('input');
-  input.type = 'text';
+  const input = document.createElement('textarea');
   input.className = 'edit-input';
-  input.maxLength = 200;
+  input.rows = 1;
+  input.maxLength = 1000;
   input.value = m.text;
   const commit = () => {
     const v = input.value.trim();
@@ -1112,19 +1112,34 @@ function startEditMemo(li, span, m) {
     saveMemos();
   };
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    // Enter で確定、Shift+Enter で改行、Esc で取り消し
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); input.blur(); }
     else if (e.key === 'Escape') { input.value = m.text; input.blur(); }
   });
+  input.addEventListener('input', () => autoGrow(input));
   input.addEventListener('blur', commit);
   span.replaceWith(input);
+  autoGrow(input);
   input.focus();
   input.select();
 }
 
 el.memoAdd.addEventListener('click', addMemo);
 el.memoInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') addMemo();
+  // Enter で追加、Shift+Enter で改行（IME変換確定中のEnterは無視）
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    addMemo();
+    autoGrow(el.memoInput);
+  }
 });
+el.memoInput.addEventListener('input', () => autoGrow(el.memoInput));
+
+// textarea を内容に合わせて自動で高さ調整
+function autoGrow(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+}
 
 // ============================================================
 //  データ（CSV 書き出し / 読み込み）

@@ -206,6 +206,8 @@ flowchart LR
 本文中の `#タグ` は `parseTags()` で抽出して `tags` 配列に保持し、表示時は `stripTags()` で本文から除いてチップ表示。
 上部のタグバー（`#memo-filter`）とメモ内チップから `memoTagFilter` を切り替えて絞り込む。
 本文はクリックで `startEditMemo()` によりインライン編集（生テキストを編集し、確定時に `parseTags()` でタグを再取得）。
+入力欄・編集欄は `<textarea>`（Enterで追加/確定・Shift+Enterで改行、`autoGrow()` で高さ自動調整、最大160px）。
+表示は `.m-text{white-space:pre-wrap}` で改行を保持。CSV は `csvEscape`/`parseCSV` が引用符付き改行を往復できる。
 タグは常に本文から導出できるため CSV スキーマ（`type,text,done,date,time,at`）は変更せず、読み込み時に再抽出する。
 
 CSV 書き出し（`exportCSVFile()`）は実行環境で分岐する。デスクトップ／ブラウザは `Blob` + `<a download>` でダウンロード。
