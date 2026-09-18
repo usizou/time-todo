@@ -111,18 +111,14 @@ function syncMobile() {
       items.push({ id: 20000 + k, title: '⏰ 正時のお知らせ', body: `${String(h).padStart(2, '0')}:00 になりました`, at });
     }
   }
-  // リマインダー（繰り返し。次の複数回分を具体的な日時で予約＝祝日除外もJSで反映）
-  let rid = 40000;
+  // リマインダー：各リマインダーは「次の1回」だけを固定IDで予約。
+  // 同じIDなので発火するたび前日分を置き換え、通知トレイに積み上がらない（＝毎日「新しい一件」）。
+  // 次々回以降はアプリ復帰時（onResume→syncMobile）に入れ直す。
   reminders.forEach((r) => {
     if (!r.enabled) return;
-    let from = now;
-    const times = r.repeat === 'once' ? 1 : 14; // 直近14回分（アプリ復帰時に入れ直す）
-    for (let n = 0; n < times; n++) {
-      const at = nextReminderTime(r, from);
-      if (at == null) break;
-      items.push({ id: rid++, title: '⏰ ' + (r.title || 'リマインダー'), body: `${repeatLabel(r)} ${r.time}`, at });
-      from = at;
-    }
+    const at = nextReminderTime(r, now);
+    if (at == null) return;
+    items.push({ id: reminderNotifId(r), title: '⏰ ' + (r.title || 'リマインダー'), body: `${repeatLabel(r)} ${r.time}`, at });
   });
 
   // 稼働中タイマーの終了
@@ -1015,6 +1011,14 @@ function nextReminderLabel(r) {
 
 async function saveReminders() {
   try { STORE.reminders = reminders; await setStore(STORE); } catch (e) { console.warn('リマインダーの保存に失敗:', e); }
+}
+
+// リマインダーごとの固定通知ID（40000-59999）。毎日同じIDで置き換えるため
+function reminderNotifId(r) {
+  let h = 0;
+  const s = String(r.id);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return 40000 + (Math.abs(h) % 20000);
 }
 
 // 15秒ごと：今この瞬間に発火すべきリマインダーを通知
