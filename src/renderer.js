@@ -916,8 +916,8 @@ function jumpToTodo(id) {
 el.nextTodo.addEventListener('click', () => jumpToTodo(el.nextTodo.dataset.todoId));
 el.overdueTodo.addEventListener('click', () => jumpToTodo(el.overdueTodo.dataset.todoId));
 
-// 「次の予定」に出すタスク：今日・未完了のうち、今に最も近いもの
-// （その日のうちなら終日表示／翌日以降は翌日になるまで出さない／時刻が来ても完了するまで消えない）
+// 「次の予定」に出すタスク：今日・未完了で、これから来るもののうち最も近いもの
+// （翌日以降は翌日になるまで出さない／過ぎたものは「未完了のタスク」ブロックへ回す）
 function nextAlarmTodo() {
   const now = Date.now();
   let best = null;
@@ -926,7 +926,8 @@ function nextAlarmTodo() {
     if (t.done) return;
     const dt = taskDateTime(t);
     if (!dt || !isTodayMs(dt)) return;      // 今日のみ（翌日以降は非表示）
-    const delta = Math.abs(dt - now);        // 過ぎたものも対象。今に最も近いものを表示
+    if (dt < now) return;                    // 過ぎたものは次の予定にしない
+    const delta = dt - now;                  // これから来るもののうち最も近いもの
     if (delta < bestDelta) { bestDelta = delta; best = t; }
   });
   return best;
