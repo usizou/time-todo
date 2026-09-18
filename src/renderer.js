@@ -1184,6 +1184,7 @@ updateReminderInputs();
 // ============================================================
 let calendars = [];       // { id, name, url, enabled }
 let calRawEvents = [];     // パース済みVEVENT（複数カレンダー分）
+let calStatus = {};        // id -> { state:'loading'|'ok'|'error', count, error }
 let calLastFetch = 0;
 let calViewYear, calViewMonth, calSelectedYmd;
 
@@ -1198,6 +1199,7 @@ async function fetchICS(url) {
     return await window.Mobile.fetchText(url);
   }
   const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.text();
 }
 
@@ -1328,14 +1330,27 @@ async function saveCalendars() {
 async function refreshCalendars() {
   const list = calendars.filter((c) => c.enabled && c.url);
   const raw = [];
+  list.forEach((c) => { calStatus[c.id] = { state: 'loading' }; });
+  renderCalendarSettings();
   for (const c of list) {
     try {
       const text = await fetchICS(c.url.trim());
-      parseICS(text).forEach((ev) => { ev.calName = c.name || ''; raw.push(ev); });
-    } catch (e) { console.warn('カレンダー取得失敗:', c.url, e); }
+      // ICSでなければ（404のHTML等）取得失敗として扱う
+      if (!/BEGIN:VCALENDAR/i.test(text)) {
+        calStatus[c.id] = { state: 'error', error: 'ICSではない応答（URLを確認）' };
+        continue;
+      }
+      const evs = parseICS(text);
+      evs.forEach((ev) => { ev.calName = c.name || ''; raw.push(ev); });
+      calStatus[c.id] = { state: 'ok', count: evs.length };
+    } catch (e) {
+      calStatus[c.id] = { state: 'error', error: String(e && e.message ? e.message : e) };
+      console.warn('カレンダー取得失敗:', c.url, e);
+    }
   }
   calRawEvents = raw;
   calLastFetch = Date.now();
+  renderCalendarSettings();
   renderTodayEvents();
   if (!el.calOverlay.hidden) renderCalendar();
 }
@@ -1422,7 +1437,15 @@ function renderCalendarSettings() {
     cb.addEventListener('change', () => { c.enabled = cb.checked; saveCalendars(); refreshCalendars(); });
     const name = document.createElement('span');
     name.className = 'cal-cfg-name';
-    name.textContent = c.name || '(名称なし)';
+    const st = calStatus[c.id];
+    let statusTxt = '';
+    if (st) {
+      if (st.state === 'loading') statusTxt = ' …取得中';
+      else if (st.state === 'ok') statusTxt = ` ✓${st.count}件`;
+      else if (st.state === 'error') statusTxt = ` ⚠${st.error || '取得失敗'}`;
+    }
+    name.textContent = (c.name || '(名称なし)') + statusTxt;
+    if (st && st.state === 'error') name.classList.add('cal-cfg-err');
     const del = document.createElement('button');
     del.className = 'cal-cfg-del'; del.textContent = '✕'; del.title = '削除';
     del.addEventListener('click', () => {

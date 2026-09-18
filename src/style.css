@@ -135,6 +135,7 @@ body {
 .cal-cfg-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .cal-cfg-item { display: flex; align-items: center; gap: 8px; }
 .cal-cfg-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-cfg-name.cal-cfg-err { color: var(--danger); }
 .cal-cfg-del { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
 .cal-cfg-del:hover { color: var(--danger); }
 .cal-cfg-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 6px; background: var(--panel); border: 1px solid var(--muted); color: var(--text); border-radius: 8px; font-size: 13px; }
