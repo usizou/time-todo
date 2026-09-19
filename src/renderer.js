@@ -1275,7 +1275,8 @@ function renderNextReminder() {
   const box = el.nextReminder;
   if (mode !== 'target') { box.style.display = 'none'; return; }
   const nx = nextReminderOverall();
-  if (!nx) { box.style.display = 'none'; return; }
+  // 今日ぶんのリマインダーだけ表示（翌日以降は出さない）
+  if (!nx || ymdOf(new Date(nx.t)) !== ymdOf(new Date())) { box.style.display = 'none'; return; }
   box.style.display = 'flex';
   box.classList.add('clickable');
   box.innerHTML = '';
@@ -1551,9 +1552,10 @@ async function refreshCalendars() {
 function renderTodayEvents() {
   const box = el.todayEvents;
   if (mode !== 'target') { box.style.display = 'none'; return; }
+  const now = Date.now();
   const evs = eventsForYmd(ymdOf(new Date()));
   const allday = evs.filter((e) => e.allDay);
-  const timed = evs.filter((e) => !e.allDay);
+  const timed = evs.filter((e) => !e.allDay && e.endMs > now); // 終了済み（過ぎた）予定は出さない
   box.innerHTML = '';
   const lines = [];
   if (allday.length) lines.push('📅 ' + allday[0].summary + (allday.length > 1 ? ` 他${allday.length - 1}` : ''));
