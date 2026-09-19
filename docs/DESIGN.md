@@ -328,7 +328,7 @@ npm run dist # exe 生成
 - `store.reminders` に配列で保存：`{ id, title, time:"HH:MM", repeat, weekdays:[0-6], date, enabled, firedKey }`。
 - `repeat`：`once`（一回。`date` 未指定なら直近）/ `daily` / `weekdays`（平日）/ `weekend`（土日）/ `weekly`（`weekdays` で曜日複数指定）。
 - **祝日対応**：内閣府 `syukujitsu.csv` から生成した `src/holidays.js`（`window.HOLIDAYS` = `["YYYY-MM-DD", …]`）を同梱。`isBusinessDay()` = 月〜金 かつ 非祝日。`weekdays`（平日）のみ祝日を除外（`weekly` は曜日そのままで除外しない）。
-  - `holidays.js` は 2024〜（現状 2027 まで）を収録。年次で更新が必要（将来はネットワーク更新を検討＝ロードマップ）。file:// でも確実に読めるよう JSON ではなくグローバル代入の JS で同梱。
+  - `holidays.js` は 2024〜（現状 2027 まで）を同梱（file:// でも確実に読めるようグローバル代入のJS）。起動時はこれを土台に、`refreshHolidays()` が holidays-jp（`HOLIDAYS_URL`＝UTF-8 JSON・内閣府データ由来）を取得して `HOLIDAYS` を最新化（同梱∪取得）。取得結果は `store.holidaysCache` に保存し、次回は「キャッシュ適用→再取得」。失敗時は同梱/キャッシュのまま。Googleの祝日カレンダーは記念日(節分/ひな祭り等)が混ざるため平日判定には不使用。
 - `nextReminderTime(r, from)`：次回発生時刻を最大400日先まで探索。`checkReminders(now)`（15秒間隔、`checkAlarms` と同時）で当日該当かつ `now∈[trig, trig+60s)` かつ `firedKey!==trig` のとき発火。`once` は発火後 `enabled=false`。
 - **モバイル**：`syncMobile()` で各リマインダーの**次の1回だけ**を、リマインダーごとの**固定ID**（`reminderNotifId()`＝id文字列ハッシュで 40000-59999）で Local Notifications に予約。同じIDなので発火のたび前日分を置き換え、通知トレイに積み上がらない（＝毎日「新しい一件」）。次々回以降は `onResume`→`syncMobile` で入れ直す（アプリを開くと再アーム）。祝日除外もJS側の `nextReminderTime` で反映。
   - トレードオフ：積み上げ防止のため同時予約は1件のみ。長期間アプリを開かないと2回目以降が予約されないため、日常的に開く前提。

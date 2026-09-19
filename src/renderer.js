@@ -717,6 +717,10 @@ async function loadTodos() {
   reminders = Array.isArray(store.reminders) ? store.reminders : [];
   renderReminders();
 
+  // 祝日：前回キャッシュがあれば適用 → その後で最新を取りに行く（失敗しても同梱ぶんで動く）
+  if (store.holidaysCache && Array.isArray(store.holidaysCache.dates)) applyHolidayDates(store.holidaysCache.dates);
+  refreshHolidays();
+
   // カレンダー購読を復元して取得
   calendars = Array.isArray(store.calendars) ? store.calendars : [];
   calHideTitles = Array.isArray(store.calHideTitles) ? store.calHideTitles : [];
@@ -1011,7 +1015,33 @@ setInterval(() => { checkAlarms(); checkReminders(Date.now()); }, 15000); // 15�
 // ============================================================
 let reminders = []; // { id, title, time:"HH:MM", repeat, weekdays:[], date, enabled, firedKey }
 let editingReminderId = null; // 編集中のリマインダーID（null=新規追加）
-const HOLIDAYS = new Set(window.HOLIDAYS || []); // 内閣府データ（holidays.js）
+let HOLIDAYS = new Set(window.HOLIDAYS || []); // 同梱の内閣府データ（holidays.js）。起動後に最新へ更新
+const HOLIDAYS_URL = 'https://holidays-jp.github.io/api/v1/date.json'; // 内閣府データ由来のUTF-8 JSON
+
+// 同梱ぶん＋取得ぶんを合わせて祝日セットを作る（同梱を常に土台にして取りこぼしを防ぐ）
+function applyHolidayDates(dates) {
+  HOLIDAYS = new Set([...(window.HOLIDAYS || []), ...dates]);
+}
+
+// 最新の祝日データを取得して更新（失敗時は同梱/キャッシュのまま）
+async function refreshHolidays() {
+  try {
+    const text = await fetchICS(HOLIDAYS_URL); // 汎用テキスト取得を流用（CORS回避・キャッシュ無効）
+    const obj = JSON.parse(text);
+    const dates = Object.keys(obj).filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    if (!dates.length) return;
+    applyHolidayDates(dates);
+    STORE.holidaysCache = { dates, at: Date.now() };
+    setStore(STORE);
+    // 祝日が変わったので表示を更新
+    if (typeof renderTodayEvents === 'function') renderTodayEvents();
+    if (typeof renderReminders === 'function') renderReminders();
+    if (typeof renderNextReminder === 'function') renderNextReminder();
+    if (el.calOverlay && !el.calOverlay.hidden) renderCalendar();
+  } catch (e) {
+    console.warn('祝日データの更新に失敗（同梱/キャッシュを使用）:', e);
+  }
+}
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 
 function ymdOf(d) {
