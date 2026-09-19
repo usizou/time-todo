@@ -279,6 +279,10 @@ textarea.cal-cfg-input { min-height: 48px; resize: vertical; font-family: inheri
 .rem-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .rem-del { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
 .rem-del:hover { color: var(--danger); }
+.rem-edit { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.rem-edit:hover { color: var(--accent); }
+.rem-item.editing { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rem-add-row { display: flex; gap: 8px; align-items: center; }
 .rem-empty { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
 .ring-track {
   fill: none;

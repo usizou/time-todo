@@ -87,6 +87,7 @@ const el = {
   remDate: document.getElementById('rem-date'),
   remWeekdays: document.getElementById('rem-weekdays'),
   remAdd: document.getElementById('rem-add'),
+  remCancel: document.getElementById('rem-cancel'),
   remList: document.getElementById('rem-list'),
   remEmpty: document.getElementById('rem-empty'),
   todayEvents: document.getElementById('today-events'),
@@ -1009,6 +1010,7 @@ setInterval(() => { checkAlarms(); checkReminders(Date.now()); }, 15000); // 15�
 //  リマインダー（繰り返し通知。祝日を考慮した「平日」対応）
 // ============================================================
 let reminders = []; // { id, title, time:"HH:MM", repeat, weekdays:[], date, enabled, firedKey }
+let editingReminderId = null; // 編集中のリマインダーID（null=新規追加）
 const HOLIDAYS = new Set(window.HOLIDAYS || []); // 内閣府データ（holidays.js）
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -1132,15 +1134,59 @@ function renderReminders() {
     sub.textContent = `${repeatLabel(r)}${r.enabled ? ' ・ 次回 ' + nextReminderLabel(r) : ''}`;
     body.append(top, sub);
 
+    const edit = document.createElement('button');
+    edit.className = 'rem-edit';
+    edit.textContent = '✎';
+    edit.title = '編集';
+    edit.addEventListener('click', () => startEditReminder(r.id));
+
     const del = document.createElement('button');
     del.className = 'rem-del';
     del.textContent = '✕';
     del.title = '削除';
     del.addEventListener('click', () => deleteReminder(r.id));
 
-    li.append(cb, body, del);
+    if (editingReminderId === r.id) li.classList.add('editing');
+    li.append(cb, body, edit, del);
     el.remList.appendChild(li);
   });
+}
+
+// 編集開始：上のフォームに値を読み込み「更新」モードにする
+function startEditReminder(id) {
+  const r = reminders.find((x) => x.id === id);
+  if (!r) return;
+  editingReminderId = id;
+  el.remTitle.value = r.title || '';
+  el.remTime.value = r.time || '';
+  el.remRepeat.value = r.repeat || 'weekdays';
+  el.remDate.value = r.date || '';
+  updateReminderInputs();
+  // 曜日チップを反映
+  el.remWeekdays.querySelectorAll('.wd-chip').forEach((b) => {
+    b.classList.toggle('on', (r.weekdays || []).includes(Number(b.dataset.w)));
+  });
+  refreshPh(el.remTime);
+  refreshPh(el.remDate);
+  el.remAdd.textContent = '更新';
+  el.remCancel.hidden = false;
+  renderReminders();
+  el.remTitle.focus();
+  el.remTitle.scrollIntoView({ block: 'nearest' });
+}
+
+// 編集モードを終了してフォームをリセット
+function exitReminderEdit() {
+  editingReminderId = null;
+  el.remTitle.value = '';
+  el.remTime.value = '';
+  el.remDate.value = '';
+  el.remWeekdays.querySelectorAll('.wd-chip.on').forEach((b) => b.classList.remove('on'));
+  el.remAdd.textContent = '追加';
+  el.remCancel.hidden = true;
+  refreshPh(el.remTime);
+  refreshPh(el.remDate);
+  renderReminders();
 }
 
 function addReminder() {
@@ -1150,17 +1196,21 @@ function addReminder() {
   const repeat = el.remRepeat.value;
   const weekdays = repeat === 'weekly' ? selectedWeekdays() : [];
   if (repeat === 'weekly' && !weekdays.length) { return; } // 曜日未選択なら追加しない
-  reminders.push({
-    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-    title,
-    time,
-    repeat,
-    weekdays,
-    date: repeat === 'once' ? (el.remDate.value || '') : '',
-    enabled: true,
-    firedKey: '',
-  });
-  el.remTitle.value = '';
+  const date = repeat === 'once' ? (el.remDate.value || '') : '';
+  if (editingReminderId) {
+    // 更新（idは維持、時刻等が変わるので再アーム）
+    const r = reminders.find((x) => x.id === editingReminderId);
+    if (r) { r.title = title; r.time = time; r.repeat = repeat; r.weekdays = weekdays; r.date = date; r.firedKey = ''; }
+    exitReminderEdit();
+  } else {
+    reminders.push({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      title, time, repeat, weekdays, date,
+      enabled: true,
+      firedKey: '',
+    });
+    el.remTitle.value = '';
+  }
   renderReminders();
   saveReminders();
   syncMobile();
@@ -1177,6 +1227,7 @@ function toggleReminder(id) {
 }
 
 function deleteReminder(id) {
+  if (editingReminderId === id) exitReminderEdit();
   reminders = reminders.filter((x) => x.id !== id);
   renderReminders();
   saveReminders();
@@ -1248,6 +1299,7 @@ el.nextReminder.addEventListener('click', () => document.querySelector('.tab[dat
 buildWeekdayChips();
 el.remRepeat.addEventListener('change', updateReminderInputs);
 el.remAdd.addEventListener('click', addReminder);
+el.remCancel.addEventListener('click', exitReminderEdit);
 el.remTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') addReminder(); });
 el.remDate.addEventListener('input', () => refreshPh(el.remDate));
 el.remTime.addEventListener('input', () => refreshPh(el.remTime));
