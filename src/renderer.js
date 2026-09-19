@@ -177,6 +177,40 @@ function syncMobile() {
   if (S.pomodoro.running && S.pomodoro.endTime) items.push({ id: 30002, title: 'ポモドーロ', body: 'フェーズが終了しました', at: S.pomodoro.endTime });
 
   window.Mobile.scheduleAll(items);
+  updateWidgetData();
+}
+
+// ホーム画面ウィジェット（案B：リマインダー＋To-Do）へ今日ぶんのデータを渡す
+function updateWidgetData() {
+  if (!window.Mobile || !window.Mobile.isNative() || !window.Mobile.updateWidget) return;
+  if (typeof reminders === 'undefined') return; // 起動途中は無視
+  const wd = ['日', '月', '火', '水', '木', '金', '土'];
+  const now = new Date();
+  const todayY = ymdOf(now);
+  const cap3 = (arr) => (arr.length <= 3 ? arr : arr.slice(0, 2).concat([{ time: '', title: `ほか ${arr.length - 2}件` }]));
+
+  // 今日のリマインダー（時刻順）
+  const rem = reminders
+    .filter((r) => {
+      if (!r.enabled) return false;
+      if (r.repeat === 'once') return (r.date || todayY) === todayY;
+      const d = new Date(); const [h, m] = (r.time || '0:0').split(':').map(Number); d.setHours(h, m, 0, 0);
+      return reminderMatchesDay(r, d);
+    })
+    .map((r) => ({ time: r.time || '', title: r.title || '(名称なし)' }))
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  // 今日/日付なしの未完了To-Do（時刻ありを先に）
+  const td = todos
+    .filter((t) => !t.done && (!t.date || t.date === todayY))
+    .map((t) => ({ time: t.time || '', title: stripTags(t.text) || t.text }))
+    .sort((a, b) => (a.time && b.time ? a.time.localeCompare(b.time) : (a.time ? -1 : b.time ? 1 : 0)));
+
+  window.Mobile.updateWidget({
+    date: `${now.getMonth() + 1}/${now.getDate()}（${wd[now.getDay()]}）`,
+    reminders: cap3(rem),
+    todos: cap3(td),
+  });
 }
 
 // ===== 定数 =====

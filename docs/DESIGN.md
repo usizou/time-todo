@@ -334,6 +334,13 @@ npm run dist # exe 生成
   - トレードオフ：積み上げ防止のため同時予約は1件のみ。長期間アプリを開かないと2回目以降が予約されないため、日常的に開く前提。
 - デスクトップはアプリ起動中のみ発火（タイマーのチャイム等と同じ制約）。
 
+## 10.7 Androidホーム画面ウィジェット（案B・2セクション）
+
+- ネイティブ実装（`android/app/src/main`）：`TodoReminderWidget`(AppWidgetProvider)＋`WidgetBridge`(Capacitorプラグイン)＋`res/layout/widget_todo_reminder.xml`＋`res/xml/widget_todo_reminder_info.xml`。Manifestに`<receiver>`、MainActivityで`registerPlugin(WidgetBridge)`。
+- データ受け渡し：Webが `window.Mobile.updateWidget(obj)` → `WidgetBridge.update({data})` が SharedPreferences(`TimeTodoWidget`/`data`)へ保存し `AppWidgetManager.updateAppWidget` で即時更新。ウィジェットはそれを読んでRemoteViewsに描画。
+- 中身：`updateWidgetData()`（`syncMobile`から呼ぶ）が「今日のリマインダー」＋「今日/日付なしの未完了To-Do」を各最大3件（超過は「ほかN件」）で送る。読み取り専用、タップで`MainActivity`起動。更新は定期(30分)＋データ変更時。
+- 注意：Webでは作れないネイティブ機能。ローカルプレビュー不可＝Actionsビルド→実機確認。
+
 ### 10.1 データモデル
 
 ```jsonc

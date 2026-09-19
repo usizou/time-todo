@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/w_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#8C8C99"
+        android:textSize="11sp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="リマインダー"
+        android:textColor="#1E66F5"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView android:id="@+id/w_rem1" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_rem2" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_rem3" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_rem_empty" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="なし" android:textColor="#8C8C99" android:textSize="12sp" android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E6"
+        android:layout_marginTop="7dp"
+        android:layout_marginBottom="7dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="To-Do"
+        android:textColor="#40A02B"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView android:id="@+id/w_todo1" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_todo2" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_todo3" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#1E1E2E" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_todo_empty" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="なし" android:textColor="#8C8C99" android:textSize="12sp" android:visibility="gone" />
+
+</LinearLayout>

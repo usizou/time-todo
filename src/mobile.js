@@ -52,6 +52,13 @@
     try { app.addListener('resume', cb); } catch (e) { /* noop */ }
   }
 
+  // ホーム画面ウィジェットへデータを渡して更新（ネイティブのWidgetBridge経由）
+  async function updateWidget(data) {
+    const wb = cap && cap.Plugins ? cap.Plugins.WidgetBridge : null;
+    if (!wb || !wb.update) return;
+    try { await wb.update({ data: JSON.stringify(data) }); } catch (e) { console.warn('ウィジェット更新に失敗', e); }
+  }
+
   // 外部URLからテキスト取得（ICS購読用。CapacitorHttp でCORSを回避）
   async function fetchText(url) {
     const http = cap && cap.Plugins ? (cap.Plugins.CapacitorHttp || cap.Plugins.Http) : null;
@@ -93,5 +100,6 @@
     onResume,
     exportCSV,
     fetchText,
+    updateWidget,
   };
 })();
